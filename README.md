@@ -4,7 +4,7 @@
 
 [![Version: v1.0.1 GA](https://img.shields.io/badge/Release-v1.0.1%20GA-blue.svg)](https://github.com/avescheong/Agent_Continuity_Steward/releases/tag/v1.0.1)
 [![Baseline: Immutable](https://img.shields.io/badge/Baseline-Immutable%20Production-success.svg)](#)
-[![Tests: 134 Passing](https://img.shields.io/badge/Tests-134%2F134%20Passing%20(100%25)-brightgreen.svg)](#)
+[![Tests: 134 Passing](https://img.shields.io/badge/Tests-196%2F196%20Passing%20(100%25)-brightgreen.svg)](#)
 [![Dependencies: Zero](https://img.shields.io/badge/Dependencies-Zero%20(Python%20Stdlib)-orange.svg)](#)
 [![Cold-Start Benchmark](https://img.shields.io/badge/Cold--Start%20Score-9.7%20%2F%2010.0-blueviolet.svg)](#)
 [![Architecture: Zero-Daemon](https://img.shields.io/badge/Architecture-Zero--Daemon%20%7C%20File--First-yellow.svg)](#)
@@ -102,7 +102,7 @@ flowchart TD
 
 ---
 
-## 5. Quickstart & Command Reference (v1.0.1 CLI)
+## 5. Quickstart & Command Reference (v1.1.0 CLI)
 
 ### 5.1 Installation
 
@@ -110,7 +110,7 @@ Install the certified distribution wheel or install from the clean-room source t
 
 ```bash
 # Option A: Install from certified wheel (Recommended)
-pip install agent_continuity_steward-1.0.1-py3-none-any.whl
+pip install agent_continuity_steward-1.1.0-py3-none-any.whl
 
 # Option B: Install from repository
 git clone -b develop https://github.com/avescheong/Agent_Continuity_Steward.git
@@ -126,25 +126,43 @@ pip install .
 
 ```bash
 # 1. Initialize a new project continuity vault (.continuity/)
-scs new CORE "Platform Core Engine" --objective "High-assurance agent runtime"
+# Flag syntax (v1.1.0):
+scs new --code CORE --name "Platform Core Engine" --objective "High-assurance agent runtime"
+# Or backward-compatible positional syntax:
+scs new CORE "Platform Core Engine"
 
-# 2. Ingest conversation dialogue from IDE session transcripts
+# 2. Ingest conversation dialogue
+# Native IDE transcript capture:
 scs record CORE
+# Or standalone Markdown transcript ingestion (v1.1.0):
+scs record CORE --file session_transcript.md
 
 # 3. Inspect quarantined proposals, active tasks, and cryptographic state seal
 scs status CORE
 
 # 4. Ratify genuine architectural proposals into canonical memory
+# Batch shorthand with attribution (v1.1.0):
+scs approve --project CORE 1,2 --author "Lead Architect"
+# Or promote all staged proposals:
 scs approve --project CORE --all
-# (or selectively approve: scs approve --project CORE P01 P02)
+# Or selective UUIDs: scs approve --project CORE P01 P02
 
 # 5. Discard conversational noise, recording rejected alternatives
 scs reject --project CORE P03 --record-why --why "Avoid external Redis daemon"
 
 # 6. Generate cross-AI restoration packages for cold-start rehydration
+# Standard file generation:
 scs handover CORE
+# Handover depth profiles (v1.1.0): compact, standard, or deep
+scs handover CORE --profile compact
+# Direct stdout printing or fast card output (v1.1.0):
+scs handover CORE --stdout
+scs handover CORE --card-only
 
-# 7. Roll back state if an experimental session must be reverted
+# 7. Install Git pre-commit state seal guard (v1.1.0)
+scs hook install --git
+
+# 8. Roll back state if an experimental session must be reverted
 scs rollback --project CORE --snapshot SNP-20261106-001
 ```
 

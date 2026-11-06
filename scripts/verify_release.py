@@ -109,7 +109,7 @@ def main() -> int:
     # -------------------------------------------------------------------------
     # 4. Automated Test Suite Execution (Dual-Layer)
     # -------------------------------------------------------------------------
-    log_step("4. Automated Conformance Test Suite (134 Tests)")
+    log_step("4. Automated Conformance Test Suite (196 Tests)")
     loader = unittest.TestLoader()
 
     # Discover Engine suite

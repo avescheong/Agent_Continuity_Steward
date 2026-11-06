@@ -25,13 +25,14 @@ When the user enters `/scs <command>` or requests continuity operations, execute
 
 | User Command | CLI Execution | Description |
 | :--- | :--- | :--- |
-| `/scs record [PROJECT]` | `scs record [PROJECT]` | Captures recent conversation turns, verifies raw immutability, extracts Caveman proposals, and places them into staging quarantine. |
+| `/scs record [PROJECT] [--file <PATH>]` | `scs record [PROJECT] [--file <PATH>]` | Captures recent conversation turns or ingests a standalone Markdown session file into staging quarantine. |
 | `/scs status [PROJECT]` | `scs status [PROJECT]` | Displays project health, SHA-256 seal status, quarantined proposals, and active tasks. |
-| `/scs approve [P01 ...] [--all]` | `scs approve [P01 ...] [--all]` | Human custody ratification. Promotes quarantined proposals into canonical memory and creates a new cryptographic seal. |
+| `/scs approve [P01 ...] [--all] [1,2] [--author <A>]` | `scs approve [P01 ...] [--all] [1,2] [--author <A>]` | Human custody ratification. Promotes quarantined proposals (supports batch ranges/commas and author attribution). |
 | `/scs reject <P01> [--why "..."] [--record-why]` | `scs reject <P01> [--why "..."] [--record-why]` | Discards a proposal, optionally recording it permanently in `REJECTED_OPTIONS.md`. |
-| `/scs handover [PROJECT]` | `scs handover [PROJECT]` | Compiles the Master AI Handover Package and fast Recovery Card for cross-AI session transfer. |
+| `/scs handover [PROJECT] [--profile P] [--stdout]` | `scs handover [PROJECT] [--profile compact\|standard\|deep] [--stdout] [--card-only]` | Compiles context restoration packages with depth profiles and direct terminal output options. |
 | `/scs rollback <SNP_CODE>` | `scs rollback <SNP_CODE>` | Instantly rolls back canonical state to a previously sealed snapshot. |
-| `/scs new <CODE> "<Name>"` | `scs new <CODE> "<Name>"` | Initializes a new project continuity vault with baseline cryptographic seal. |
+| `/scs new <CODE> "<Name>"` | `scs new --code <CODE> --name "<Name>" (or positional)` | Initializes a new project continuity vault with baseline cryptographic seal (dual syntax support). |
+| `/scs hook install --git` | `scs hook install --git` | Installs standalone Git pre-commit state seal verification guard into repository. |
 | `/scs list` | `scs list` | Lists all discovered project vaults in the workspace and active focus. |
 | `/scs switch <CODE>` | `scs switch <CODE>` | Switches active project context to another discovered vault. |
 | `/scs ui [PROJECT]` | `scs ui [PROJECT]` | Generates an interactive Antigravity Generative UI HTML dashboard artifact. |

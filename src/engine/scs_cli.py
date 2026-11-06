@@ -920,25 +920,47 @@ def cmd_hook(args: argparse.Namespace) -> int:
     hooks_dir.mkdir(parents=True, exist_ok=True)
     pre_commit_hook = hooks_dir / "pre-commit"
 
-    # 2. Ensure scripts/scs-pre-commit.py exists in repo_root
+    # 2. Ensure scripts/scs-pre-commit.py exists in repo_root with full verification logic
     target_script = repo_root / "scripts" / "scs-pre-commit.py"
-    if not target_script.exists():
-        target_script.parent.mkdir(parents=True, exist_ok=True)
+    target_script.parent.mkdir(parents=True, exist_ok=True)
+
+    needs_deploy = True
+    if target_script.exists():
+        try:
+            existing_code = target_script.read_text(encoding="utf-8")
+            if "compute_sha256" in existing_code and "find_continuity_vaults" in existing_code:
+                needs_deploy = False
+        except Exception:
+            needs_deploy = True
+
+    if needs_deploy:
+        deployed = False
         bundled_candidates = [
             Path(__file__).resolve().parent.parent.parent / "scripts" / "scs-pre-commit.py",
             Path(__file__).resolve().parent / "scs-pre-commit.py",
         ]
-        copied = False
         for bc in bundled_candidates:
             if bc.exists():
-                target_script.write_text(bc.read_text(encoding="utf-8"), encoding="utf-8")
-                copied = True
-                break
-        if not copied:
-            target_script.write_text(
-                '#!/usr/bin/env python3\nimport sys\nprint("[SCS] Pre-commit verification passed.")\nsys.exit(0)\n',
-                encoding="utf-8"
-            )
+                try:
+                    content = bc.read_text(encoding="utf-8")
+                    if "compute_sha256" in content and "find_continuity_vaults" in content:
+                        target_script.write_text(content, encoding="utf-8")
+                        deployed = True
+                        break
+                except Exception:
+                    pass
+        if not deployed:
+            try:
+                from engine.pre_commit_template import PRE_COMMIT_SCRIPT_CONTENT
+                target_script.write_text(PRE_COMMIT_SCRIPT_CONTENT, encoding="utf-8")
+                deployed = True
+            except ImportError:
+                try:
+                    from .pre_commit_template import PRE_COMMIT_SCRIPT_CONTENT
+                    target_script.write_text(PRE_COMMIT_SCRIPT_CONTENT, encoding="utf-8")
+                    deployed = True
+                except Exception:
+                    pass
 
     # 3. Create or update pre-commit hook file safely
     hook_start_marker = "# --- SCS PRE-COMMIT GUARD START ---"

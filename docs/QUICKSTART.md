@@ -3,7 +3,7 @@
 > **Get up and running with evidence-first AI session continuity in under 5 minutes.**
 
 [![Version: v1.0.1 GA](https://img.shields.io/badge/Release-v1.0.1%20GA-blue.svg)](https://github.com/avescheong/Agent_Continuity_Steward/releases/tag/v1.0.1)
-[![Conformance: 134 Passing](https://img.shields.io/badge/Conformance-134%2F134%20Tests%20(100%25)-brightgreen.svg)](#)
+[![Conformance: 134 Passing](https://img.shields.io/badge/Conformance-196%2F196%20Tests%20(100%25)-brightgreen.svg)](#)
 [![Dependencies: Zero](https://img.shields.io/badge/Dependencies-Zero%20(Stdlib)-orange.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](../LICENSE)
 
@@ -34,7 +34,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 # 2. Install the certified zero-dependency distribution wheel
-pip install agent_continuity_steward-1.0.1-py3-none-any.whl
+pip install agent_continuity_steward-1.1.0-py3-none-any.whl
 ```
 
 ### Option B: Install from GitHub Repository
@@ -86,10 +86,10 @@ Detected Python Version: 3.13.x
 [OK] Found: src\engine\scs_cli.py
 [OK] Found: .agents\skills\scs\SKILL.md
 
---- 4. Automated Conformance Test Suite (134 Tests) ---
-Ran 54 tests (Engine Suite: src/engine/) -> OK
+--- 4. Automated Conformance Test Suite (196 Tests) ---
+Ran 116 tests (Engine Suite: src/engine/) -> OK
 Ran 80 tests (Upstream Normative Suite: tests/) -> OK
-[OK] 100% Test Conformance Achieved (134/134 tests passing).
+[OK] 100% Test Conformance Achieved (196/196 tests passing).
 
 --- 5. Live Vault Lifecycle Verification (Ephemeral Sandbox) ---
 [OK] Ephemeral vault created successfully.
@@ -104,17 +104,20 @@ Ran 80 tests (Upstream Normative Suite: tests/) -> OK
 
 ---
 
-## 3. Step-by-Step Operator Workflow (Canonical v1.0.1 CLI)
+## 3. Step-by-Step Operator Workflow (Canonical v1.1.0 CLI)
 
 ### Step 1: Initialize a Project Continuity Vault
 Initialize an isolated `.continuity/` vault for your project. You can store the vault inside your repository or in an out-of-repo directory to keep git history clean:
 
 ```bash
-# Initialize vault in current working directory:
+# Initialize vault using flag syntax (v1.1.0):
+scs new --code PAY --name "Payment Gateway" --objective "Build Stripe & PayPal integration"
+
+# Or initialize using backward-compatible positional syntax:
 scs new PAY "Payment Gateway" --objective "Build Stripe & PayPal integration"
 
 # Or initialize in a centralized user directory:
-scs new PAY "Payment Gateway" `
+scs new --code PAY --name "Payment Gateway" `
   --path "$HOME\My_Project_Continuity\PAY" `
   --repo "./PaymentGateway" `
   --objective "Build Stripe & PayPal integration"
@@ -129,7 +132,11 @@ scs new PAY "Payment Gateway" `
 After completing an architectural discussion, brainstorming alternatives, or finishing code modifications in your IDE, capture the session:
 
 ```bash
+# Incremental capture from active IDE transcript:
 scs record PAY
+
+# Or standalone Markdown transcript ingestion outside Antigravity (v1.1.0):
+scs record PAY --file ./session_transcripts/chat_20261107.md
 ```
 
 **Under the Hood:**
@@ -168,6 +175,9 @@ Pending Proposals Awaiting Human Custody Review:
 The human operator has sole custody over canonical memory. Promote genuine architectural decisions or reject speculative noise:
 
 ```bash
+# Batch approval shorthand with attribution (v1.1.0):
+scs approve --project PAY 1,2 --author "Lead Architect"
+
 # Approve all staged proposals in batch:
 scs approve --project PAY --all
 
@@ -189,7 +199,15 @@ scs reject --project PAY P03 --record-why --why "Avoid external Redis daemon for
 Before switching tasks, restarting your IDE, or handing work over to another engineer or AI model, compile context restoration packages:
 
 ```bash
+# Standard file generation (.continuity/handover/):
 scs handover PAY
+
+# Handover depth profiles (v1.1.0): compact, standard, or deep
+scs handover PAY --profile compact
+
+# Direct stdout piping or card-only output (v1.1.0):
+scs handover PAY --stdout
+scs handover PAY --card-only
 ```
 
 This generates two complementary restoration documents in `.continuity/handover/`:
@@ -210,6 +228,21 @@ scs rollback --project PAY SNP-20261106-001
 ```
 
 *Guarantee:* The ledger and all one-way Markdown projections instantly revert to the exact bit-level SHA-256 seal of the chosen snapshot.
+
+---
+
+### Step 7: Git Pre-Commit State Seal Guard (v1.1.0)
+Install the standalone zero-dependency Git pre-commit state seal verification guard into your repository:
+
+```bash
+scs hook install --git
+```
+
+**Guard Guarantees:**
+- Verifies `canonical/ledger.json` syntax and schema integrity on every commit.
+- Computes deterministic SHA-256 seal and validates against `snapshots/LATEST_SEAL`.
+- Fails closed (blocks commit) if unauthorized manual modifications or corruption occurred.
+- Preserves existing pre-commit hooks (linters, formatters, type-checkers).
 
 ---
 
