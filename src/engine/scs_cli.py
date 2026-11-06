@@ -85,8 +85,34 @@ def auto_detect_conversation_id(app_data_dir: Optional[Union[str, Path]] = None)
 def cmd_new(args: argparse.Namespace) -> int:
     """Scaffolds a new project continuity vault (.continuity/)."""
     target_dir = Path(args.path or Path.cwd()).resolve()
-    code = args.code.strip().upper()
-    name = args.name.strip()
+
+    # Dual syntax support: positional arguments OR --code / --name flags
+    flag_code = getattr(args, "flag_code", None)
+    flag_name = getattr(args, "flag_name", None)
+    pos_code = getattr(args, "pos_code", None) or getattr(args, "code", None)
+    pos_name = getattr(args, "pos_name", None) or getattr(args, "name", None)
+
+    if flag_code and not flag_name and pos_code and not pos_name:
+        code = flag_code
+        name = pos_code
+    elif flag_name and not flag_code and pos_code and not pos_name:
+        code = pos_code
+        name = flag_name
+    else:
+        code = flag_code or pos_code or ""
+        name = flag_name or pos_name or ""
+
+    code = str(code).strip().upper()
+    name = str(name).strip()
+
+    if not code or not name:
+        print(f"{ERR_SYM} Error creating vault: Both project code and project name are required.", file=sys.stderr)
+        print("Usage: scs new <CODE> \"<Name>\" OR scs new --code <CODE> --name \"<Name>\"", file=sys.stderr)
+        return 1
+
+    # Keep args attributes synchronized for downstream callers
+    args.code = code
+    args.name = name
 
     # Determine source repository roots (logically separated from vault)
     repo_dirs = None
@@ -165,6 +191,8 @@ def cmd_switch(args: argparse.Namespace) -> int:
 def cmd_record(args: argparse.Namespace) -> int:
     """Captures conversation dialogue into an immutable SES file and stages Caveman proposals."""
     conv_id = args.conv_id or auto_detect_conversation_id(args.app_data)
+    proj_arg = getattr(args, "project_flag", None) or getattr(args, "project", None)
+    args.project = proj_arg
 
     if not conv_id:
         print(f"{ERR_SYM} Missing conversation ID. Provide via --conv-id <UUID> or CONVERSATION_ID env var.", file=sys.stderr)
@@ -172,7 +200,7 @@ def cmd_record(args: argparse.Namespace) -> int:
 
     try:
         vault_path = vault_store.resolve_project_vault(
-            project_arg=args.project,
+            project_arg=proj_arg,
             conversation_id=conv_id,
         )
     except vault_store.AmbiguousProjectError as exc:
@@ -298,9 +326,11 @@ def cmd_record(args: argparse.Namespace) -> int:
 def cmd_status(args: argparse.Namespace) -> int:
     """Displays comprehensive project health, seal verification, tasks, and ASCII flowcharts."""
     conv_id = args.conv_id or os.environ.get("CONVERSATION_ID", "")
+    proj_arg = getattr(args, "project_flag", None) or getattr(args, "project", None)
+    args.project = proj_arg
     try:
         vault_path = vault_store.resolve_project_vault(
-            project_arg=args.project,
+            project_arg=proj_arg,
             conversation_id=conv_id,
         )
     except Exception as exc:
@@ -394,14 +424,38 @@ def cmd_approve(args: argparse.Namespace) -> int:
     """Ratifies staged proposals and commits them to canonical SSOT memory."""
     try:
         conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
-        vault_path = vault_store.resolve_project_vault(project_arg=args.project, conversation_id=conv_id)
-        p_ids = args.proposals if not args.all else None
+        project_flag = getattr(args, "project_flag", None) or getattr(args, "project", None)
+        raw_proposals = list(getattr(args, "proposals", []) or [])
+        is_all = getattr(args, "all", False)
+
+        project_arg = project_flag
+        p_ids = raw_proposals
+
+        # If --project was not supplied, inspect first positional argument
+        if not project_arg and raw_proposals:
+            first_token = raw_proposals[0]
+            if is_all:
+                project_arg = first_token
+                p_ids = []
+            else:
+                cand_path = Path(first_token).resolve()
+                is_dir = cand_path.exists() and (cand_path.is_dir() or (cand_path / ".continuity").exists())
+                known_codes = {d["project_code"].upper() for d in vault_store.discover_vaults()}
+                if is_dir or first_token.upper() in known_codes:
+                    project_arg = first_token
+                    p_ids = raw_proposals[1:]
+
+        args.project = project_arg
+        args.proposals = p_ids
+
+        vault_path = vault_store.resolve_project_vault(project_arg=project_arg, conversation_id=conv_id)
+        p_ids_to_promote = p_ids if not is_all else None
         force = getattr(args, "force", False)
 
         res = vault_store.promote_proposals(
             vault_dir=vault_path,
-            proposal_ids=p_ids,
-            promote_all=args.all or (not p_ids),
+            proposal_ids=p_ids_to_promote,
+            promote_all=is_all or (not p_ids_to_promote),
             label=args.label or "Human custody approval",
             allow_unverified=force,
         )
@@ -434,8 +488,25 @@ def cmd_reject(args: argparse.Namespace) -> int:
     """Discards a staged proposal, optionally recording it to Do-Not-Repeat memory."""
     try:
         conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
-        vault_path = vault_store.resolve_project_vault(project_arg=args.project, conversation_id=conv_id)
-        p_id = args.proposal_id.strip()
+        project_flag = getattr(args, "project_flag", None) or getattr(args, "project", None)
+        pos1 = getattr(args, "pos_arg1", None) or getattr(args, "proposal_id", None)
+        pos2 = getattr(args, "pos_arg2", None)
+
+        if pos1 and pos2:
+            project_arg = project_flag or pos1
+            p_id = str(pos2).strip()
+        else:
+            project_arg = project_flag
+            p_id = str(pos1).strip() if pos1 else ""
+
+        args.project = project_arg
+        args.proposal_id = p_id
+
+        if not p_id:
+            print(f"{ERR_SYM} Error rejecting proposal: Proposal ID required.", file=sys.stderr)
+            return 1
+
+        vault_path = vault_store.resolve_project_vault(project_arg=project_arg, conversation_id=conv_id)
         res = vault_store.reject_proposal(
             vault_dir=vault_path,
             proposal_id=p_id,
@@ -461,7 +532,9 @@ def cmd_handover(args: argparse.Namespace) -> int:
     """Generates cross-AI restoration handover package and fast recovery card."""
     try:
         conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
-        vault_path = vault_store.resolve_project_vault(project_arg=args.project, conversation_id=conv_id)
+        proj_arg = getattr(args, "project_flag", None) or getattr(args, "project", None)
+        args.project = proj_arg
+        vault_path = vault_store.resolve_project_vault(project_arg=proj_arg, conversation_id=conv_id)
         ledger = vault_store.read_ledger(vault_path, verify_seal=True)
         proj = ledger.get("project", {})
         proj_code = proj.get("code", "PROJ")
@@ -554,13 +627,39 @@ def cmd_handover(args: argparse.Namespace) -> int:
 
 def cmd_rollback(args: argparse.Namespace) -> int:
     """Restores canonical SSOT state from a previously sealed snapshot."""
-    snap_code = (getattr(args, "snapshot_flag", None) or getattr(args, "snapshot_code", None) or "").strip()
+    project_flag = getattr(args, "project_flag", None) or getattr(args, "project", None)
+    snapshot_flag = getattr(args, "snapshot_flag", None)
+    pos1 = getattr(args, "pos_arg1", None) or getattr(args, "snapshot_code", None)
+    pos2 = getattr(args, "pos_arg2", None)
+
+    snap_code = snapshot_flag
+    project_arg = project_flag
+
+    if pos1 and pos2:
+        project_arg = project_arg or pos1
+        snap_code = snap_code or pos2
+    elif pos1:
+        if snapshot_flag:
+            project_arg = project_arg or pos1
+        elif str(pos1).upper().startswith("SNP-"):
+            snap_code = pos1
+        else:
+            if project_arg:
+                snap_code = pos1
+            else:
+                snap_code = pos1
+
+    snap_code = (snap_code or "").strip()
     if not snap_code:
         print(f"{ERR_SYM} Error executing rollback: Snapshot code required. Provide as positional argument or via `--snapshot <CODE>`.", file=sys.stderr)
         return 1
+
+    args.project = project_arg
+    args.snapshot_code = snap_code
+
     try:
         conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
-        vault_path = vault_store.resolve_project_vault(project_arg=args.project, conversation_id=conv_id)
+        vault_path = vault_store.resolve_project_vault(project_arg=project_arg, conversation_id=conv_id)
         res = vault_store.rollback_to_snapshot(vault_dir=vault_path, snapshot_code=snap_code)
         print(f"{OK_SYM} Successfully rolled back canonical memory to snapshot `{snap_code}`:")
         print(f"  Restored Seal: {res['checksum_sha256'][:16]}... (Intact)")
@@ -577,12 +676,14 @@ def cmd_ui(args: argparse.Namespace) -> int:
     """Generates an Antigravity Generative UI HTML dashboard artifact."""
     active_vault = None
     conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
-    if args.project:
-        p_path = Path(args.project).resolve()
+    proj_arg = getattr(args, "project_flag", None) or getattr(args, "project", None)
+    args.project = proj_arg
+    if proj_arg:
+        p_path = Path(proj_arg).resolve()
         search_roots = [p_path] if p_path.exists() else None
         try:
             active_vault = vault_store.resolve_project_vault(
-                project_arg=args.project,
+                project_arg=proj_arg,
                 conversation_id=conv_id,
                 search_roots=search_roots,
             )
@@ -733,8 +834,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     # new
     p_new = subparsers.add_parser("new", help="Scaffold a new project continuity vault")
-    p_new.add_argument("code", help="Short project code (e.g. RIE, HERO_KAI)")
-    p_new.add_argument("name", help="Full human-readable project name")
+    p_new.add_argument("pos_code", nargs="?", default=None, metavar="code", help="Short project code (e.g. RIE, HERO_KAI)")
+    p_new.add_argument("pos_name", nargs="?", default=None, metavar="name", help="Full human-readable project name")
+    p_new.add_argument("--code", dest="flag_code", help="Short project code (flag syntax, e.g. --code RIE)")
+    p_new.add_argument("--name", dest="flag_name", help="Full human-readable project name (flag syntax, e.g. --name 'Project Name')")
     p_new.add_argument("--path", help="Target project root directory (default: CWD)")
     p_new.add_argument("--objective", help="Primary project objective")
     p_new.add_argument("--focus", help="Initial operational focus")
@@ -754,53 +857,59 @@ def build_parser() -> argparse.ArgumentParser:
 
     # record
     p_record = subparsers.add_parser("record", help="Record incremental session evidence")
-    p_record.add_argument("project", nargs="?", help="Optional project code or directory")
+    p_record.add_argument("project", nargs="?", default=None, help="Optional project code or directory")
+    p_record.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory (flag syntax)")
     p_record.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_record.add_argument("--app-data", help="Custom Antigravity appData directory")
     p_record.set_defaults(func=cmd_record)
 
     # status
     p_status = subparsers.add_parser("status", help="Display project health and continuity status")
-    p_status.add_argument("project", nargs="?", help="Optional project code or directory")
+    p_status.add_argument("project", nargs="?", default=None, help="Optional project code or directory")
+    p_status.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory (flag syntax)")
     p_status.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_status.set_defaults(func=cmd_status)
 
     # approve
     p_approve = subparsers.add_parser("approve", help="Ratify quarantined proposals into canonical memory")
-    p_approve.add_argument("proposals", nargs="*", help="Specific proposal IDs to approve (e.g. P01 P02)")
+    p_approve.add_argument("proposals", nargs="*", help="Specific proposal IDs to approve or project code (e.g. P01 P02)")
     p_approve.add_argument("--all", action="store_true", help="Approve all pending proposals")
     p_approve.add_argument("--force", action="store_true", help="Force promotion bypassing quality invariant warnings")
-    p_approve.add_argument("--project", help="Target project code or directory")
+    p_approve.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory")
     p_approve.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_approve.add_argument("--label", help="Reason for approval update")
     p_approve.set_defaults(func=cmd_approve)
 
     # reject
     p_reject = subparsers.add_parser("reject", help="Discard a staged proposal")
-    p_reject.add_argument("proposal_id", help="Proposal ID to reject (e.g. P01)")
+    p_reject.add_argument("pos_arg1", metavar="proposal_id", help="Proposal ID to reject (or project code if 2 positional args)")
+    p_reject.add_argument("pos_arg2", nargs="?", default=None, metavar="proposal_id", help="Proposal ID (if first arg is project)")
     p_reject.add_argument("--why", help="Failure reason or rationale for rejection")
     p_reject.add_argument("--record-why", action="store_true", help="Permanently record in REJECTED_OPTIONS memory")
-    p_reject.add_argument("--project", help="Target project code or directory")
+    p_reject.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory")
     p_reject.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_reject.set_defaults(func=cmd_reject)
 
     # handover
     p_handover = subparsers.add_parser("handover", help="Generate master AI handover restoration package")
-    p_handover.add_argument("project", nargs="?", help="Optional project code or directory")
+    p_handover.add_argument("project", nargs="?", default=None, help="Optional project code or directory")
+    p_handover.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory (flag syntax)")
     p_handover.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_handover.set_defaults(func=cmd_handover)
 
     # rollback
     p_rollback = subparsers.add_parser("rollback", help="Restore canonical memory from prior sealed snapshot")
-    p_rollback.add_argument("snapshot_code", nargs="?", default=None, help="Snapshot code to restore (e.g. SNP-20261105-001)")
+    p_rollback.add_argument("pos_arg1", nargs="?", default=None, metavar="snapshot_code", help="Snapshot code to restore or project code")
+    p_rollback.add_argument("pos_arg2", nargs="?", default=None, metavar="snapshot_code", help="Snapshot code to restore (if first arg is project)")
     p_rollback.add_argument("--snapshot", dest="snapshot_flag", help="Snapshot code to restore (flag alias, e.g. SNP-20261105-001)")
-    p_rollback.add_argument("--project", help="Target project code or directory")
+    p_rollback.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory")
     p_rollback.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_rollback.set_defaults(func=cmd_rollback)
 
     # ui
     p_ui = subparsers.add_parser("ui", help="Generate interactive Generative UI dashboard artifact")
-    p_ui.add_argument("project", nargs="?", help="Optional project code or directory")
+    p_ui.add_argument("project", nargs="?", default=None, help="Optional project code or directory")
+    p_ui.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory (flag syntax)")
     p_ui.add_argument("--root", help="Root search directory")
     p_ui.add_argument("--output", help="Output HTML file path")
     p_ui.add_argument("--conv-id", help="Antigravity conversation UUID")
