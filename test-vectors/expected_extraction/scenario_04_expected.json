@@ -1,0 +1,23 @@
+{
+  "scenario_id": "SCENARIO-04",
+  "title": "Partial Agreements & Hybrid Decisions",
+  "description": "Verifies compound multi-clause turn handling where an agreed component becomes a decision while a discarded component becomes a rejected option.",
+  "expected_decisions": [
+    {
+      "statement": "Use ClickHouse",
+      "rationale_why": "column-oriented aggregation is fast",
+      "confidence": "HIGH",
+      "status": "APPROVED"
+    }
+  ],
+  "expected_rejected_options": [
+    {
+      "statement": "Apache Kafka",
+      "why_rejected": "it requires JVM and is too heavy for desktop"
+    }
+  ],
+  "expected_constraints": [],
+  "expected_tasks": [],
+  "expected_open_questions": [],
+  "expected_artifacts": []
+}

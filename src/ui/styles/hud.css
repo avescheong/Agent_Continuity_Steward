@@ -1,0 +1,554 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-width: 430px;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.4;
+  user-select: none;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#pill-container,
+#drawer-area,
+#mission-container,
+#fragment-container {
+  min-width: 430px;
+  box-sizing: border-box;
+}
+
+/* -------------------------------------------------------------------------
+   Pill Header Strip
+------------------------------------------------------------------------- */
+.hud-pill {
+  height: 48px;
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.pill-left, .pill-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pill-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.brand-badge {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--color-pending);
+  background: rgba(99, 102, 241, 0.15);
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.project-select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  max-width: 95px;
+  outline: none;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-muted);
+}
+
+.btn-primary {
+  background: var(--color-pending);
+  border-color: var(--color-pending);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #4F46E5;
+}
+
+.btn-sm {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.btn-icon {
+  padding: 2px;
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.btn-icon.active {
+  color: var(--color-verified);
+  border-color: var(--color-verified);
+}
+
+.status-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-input);
+  padding: 2px 5px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-verified { background: var(--color-verified); }
+.dot-local { background: var(--color-local); }
+.dot-modified { background: var(--color-modified); }
+.dot-missing { background: var(--color-missing); }
+
+/* -------------------------------------------------------------------------
+   Adaptive Compact Mode Rules
+------------------------------------------------------------------------- */
+body.mode-compact {
+  height: auto;
+  min-height: auto;
+  overflow: hidden;
+}
+
+body.mode-compact #drawer-area {
+  flex: none;
+  height: auto;
+  overflow: hidden;
+}
+
+body.mode-compact #mission-container,
+body.mode-compact #fragment-container {
+  display: block !important;
+  flex-shrink: 0;
+}
+
+body.mode-compact #inbox-container,
+body.mode-compact .tab-bar,
+body.mode-compact #content-pane {
+  display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   Mission Strip & Action Bar
+------------------------------------------------------------------------- */
+.mission-strip {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.mission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.mission-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.mission-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.mission-input:hover {
+  border-color: var(--border-subtle);
+}
+.mission-input:focus {
+  background: var(--bg-input);
+  border-color: var(--border-focus);
+}
+
+/* -------------------------------------------------------------------------
+   Session Action Bar (Session -> Continuity MD -> Handover)
+------------------------------------------------------------------------- */
+.session-bar {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  gap: 5px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.session-primary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.btn-paste {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.session-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-pill {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+.session-pill.has-pending {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-pending);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.session-total {
+  color: var(--text-secondary);
+}
+
+.session-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.btn-continuity {
+  flex: 1;
+  font-size: 10px;
+  padding: 3px 6px;
+  justify-content: center;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.btn-handover {
+  font-size: 10px;
+  padding: 3px 6px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.btn-handover:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.btn-active-gen {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: var(--color-verified) !important;
+  border-color: var(--color-verified) !important;
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------------------
+   Inbox Banner
+------------------------------------------------------------------------- */
+.inbox-banner {
+  background: rgba(99, 102, 241, 0.12);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 11px;
+}
+.inbox-badge {
+  background: var(--color-pending);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.inbox-drawer {
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border);
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.proposal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.proposal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.proposal-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+.tag-TASK { background: rgba(56, 189, 248, 0.2); color: var(--color-local); }
+.tag-DECISION { background: rgba(16, 185, 129, 0.2); color: var(--color-verified); }
+.tag-REJECTED_OPTION { background: rgba(244, 63, 94, 0.2); color: var(--color-missing); }
+.tag-BLOCKER { background: rgba(244, 63, 94, 0.25); color: var(--color-missing); }
+.tag-ARTIFACT { background: rgba(168, 85, 247, 0.2); color: var(--color-chat); }
+.tag-IDEA { background: rgba(245, 158, 11, 0.2); color: var(--color-modified); }
+
+/* -------------------------------------------------------------------------
+   Tabs & Main Content Area
+------------------------------------------------------------------------- */
+.tab-bar {
+  display: flex;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--color-pending);
+}
+
+.content-pane {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* -------------------------------------------------------------------------
+   Cards (Tasks, Decisions, Artifacts)
+------------------------------------------------------------------------- */
+.hud-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s ease;
+}
+.hud-card:hover {
+  border-color: var(--text-muted);
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.card-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.chip-why {
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   Modals & Overlays
+------------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 12px;
+}
+.modal-box {
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-hud);
+}
+.modal-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+.modal-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.modal-footer {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.toast {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--color-verified);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  box-shadow: var(--shadow-hud);
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

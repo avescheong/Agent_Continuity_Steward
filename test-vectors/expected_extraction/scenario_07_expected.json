@@ -1,0 +1,14 @@
+{
+  "scenario_id": "SCENARIO-07",
+  "title": "Pure Brainstorming & Exploratory Discussion",
+  "description": "Verifies that pure exploratory discussions yield zero decisions, zero rejections, zero tasks, and preserve inquiries in context.",
+  "expected_decisions": [],
+  "expected_rejected_options": [],
+  "expected_constraints": [],
+  "expected_tasks": [],
+  "expected_open_questions": [
+    "What are the pros and cons of event sourcing versus CRUD for our state machine?",
+    "What if we consider CQRS?"
+  ],
+  "expected_artifacts": []
+}

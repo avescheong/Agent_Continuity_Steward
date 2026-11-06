@@ -1,0 +1,23 @@
+{
+  "scenario_id": "SCENARIO-03",
+  "title": "Decision Reversals & Superseding",
+  "description": "Verifies multi-turn decision reversal where a superseded choice is retired from active decisions to rejected options.",
+  "expected_decisions": [
+    {
+      "statement": "Use SQLite",
+      "rationale_why": "we must be single-binary offline",
+      "confidence": "HIGH",
+      "status": "APPROVED"
+    }
+  ],
+  "expected_rejected_options": [
+    {
+      "statement": "PostgreSQL",
+      "why_rejected": "Discarded in favor of Use SQLite"
+    }
+  ],
+  "expected_constraints": [],
+  "expected_tasks": [],
+  "expected_open_questions": [],
+  "expected_artifacts": []
+}

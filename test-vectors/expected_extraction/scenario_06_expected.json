@@ -1,0 +1,26 @@
+{
+  "scenario_id": "SCENARIO-06",
+  "title": "Fenced Code Blocks & Verbatim File Paths",
+  "description": "Verifies that comments inside fenced code blocks do not trigger false decisions while referenced file paths are preserved verbatim.",
+  "expected_decisions": [
+    {
+      "statement": "Use InMemoryCache",
+      "rationale_why": "zero external daemon dependencies",
+      "confidence": "HIGH",
+      "status": "APPROVED"
+    }
+  ],
+  "expected_rejected_options": [
+    {
+      "statement": "Redis",
+      "why_rejected": "Rejected by human"
+    }
+  ],
+  "expected_constraints": [],
+  "expected_tasks": [],
+  "expected_open_questions": [],
+  "expected_artifacts": [
+    "src/scs_core/cache/manager.py",
+    "config/redis_settings.json"
+  ]
+}

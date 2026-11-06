@@ -1,0 +1,19 @@
+{
+  "scenario_id": "SCENARIO-05",
+  "title": "Ambiguous Confirmations & Provisional Dialogue",
+  "description": "Verifies that provisional hesitation ('sleep on it', 'maybe') yields exactly zero false-positive decisions and preserves AI proposals in unratified state.",
+  "expected_decisions": [],
+  "expected_recommendations": [
+    {
+      "statement": "Migrating our entire frontend from React to Svelte",
+      "status": "Awaiting human decision",
+      "proposed_by": "AI",
+      "reasoning": "smaller bundle size"
+    }
+  ],
+  "expected_rejected_options": [],
+  "expected_constraints": [],
+  "expected_tasks": [],
+  "expected_open_questions": [],
+  "expected_artifacts": []
+}

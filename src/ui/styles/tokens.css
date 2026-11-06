@@ -1,0 +1,35 @@
+:root {
+  /* Slate / Dark Neutral Surfaces */
+  --bg-app: #0B1120;
+  --bg-header: #0F172A;
+  --bg-card: #1E293B;
+  --bg-card-hover: #26334D;
+  --bg-input: #090E17;
+
+  /* Borders & Dividers */
+  --border: #334155;
+  --border-subtle: #1E293B;
+  --border-focus: #6366F1;
+
+  /* Typography */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+
+  /* Semantic Reality Colors */
+  --color-verified: #10B981;    /* Emerald - VERIFIED_MATCH */
+  --color-local: #38BDF8;       /* Sky - LOCAL_FILE_EXISTS */
+  --color-modified: #F59E0B;    /* Amber - MODIFIED */
+  --color-missing: #F43F5E;     /* Rose - MISSING / BLOCKED */
+  --color-chat: #A855F7;        /* Violet - CONVERSATION_ONLY */
+  --color-pending: #6366F1;     /* Indigo - PROPOSAL INBOX */
+
+  /* Shadows & Curves */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+  --shadow-hud: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+}

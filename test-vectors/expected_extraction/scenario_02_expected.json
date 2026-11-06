@@ -1,0 +1,27 @@
+{
+  "scenario_id": "SCENARIO-02",
+  "title": "Multiple Rejected Alternatives",
+  "description": "Verifies candidate comparison, rejection capture with explicit reasons, and ratified decision capture.",
+  "expected_decisions": [
+    {
+      "statement": "Use Windows Named Pipes",
+      "rationale_why": "it is native and has zero port conflict",
+      "confidence": "HIGH",
+      "status": "APPROVED"
+    }
+  ],
+  "expected_rejected_options": [
+    {
+      "statement": "Local HTTP",
+      "why_rejected": "port conflicts with existing developer servers"
+    },
+    {
+      "statement": "Shared Memory",
+      "why_rejected": "mutex synchronization in Python is brittle"
+    }
+  ],
+  "expected_constraints": [],
+  "expected_tasks": [],
+  "expected_open_questions": [],
+  "expected_artifacts": []
+}

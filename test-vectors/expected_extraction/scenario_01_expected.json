@@ -1,0 +1,41 @@
+{
+  "scenario_id": "SCENARIO-01",
+  "title": "Multi-Turn Architecture Discussion",
+  "description": "Verifies multi-turn causal chain, direct human decision ratification, constraint preservation, task separation, open questions, and physical artifact tracking.",
+  "expected_decisions": [
+    {
+      "statement": "Use SQLite with WAL mode",
+      "rationale_why": "we need atomic ACID commits",
+      "confidence": "HIGH",
+      "status": "APPROVED"
+    }
+  ],
+  "expected_rejected_options": [],
+  "expected_constraints": [
+    {
+      "statement": "Database file size must strictly remain under 50MB",
+      "cluster": "STORAGE_CAP"
+    }
+  ],
+  "expected_tasks": [
+    {
+      "title": "Implement schema migrations in src/scs_core/db/schema.sql",
+      "is_completed": false
+    },
+    {
+      "title": "Add WAL pragma config to vault.py",
+      "is_completed": false
+    },
+    {
+      "title": "Initial write benchmark verified (15,000 ops/sec)",
+      "is_completed": true
+    }
+  ],
+  "expected_open_questions": [
+    "Evaluate whether also compress historical snapshots with zstandard is required."
+  ],
+  "expected_artifacts": [
+    "src/scs_core/db/vault.py",
+    "src/scs_core/db/schema.sql"
+  ]
+}

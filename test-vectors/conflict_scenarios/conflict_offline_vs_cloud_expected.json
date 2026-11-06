@@ -1,0 +1,21 @@
+{
+  "scenario_id": "CONFLICT-01",
+  "title": "Offline Constraint vs Cloud Decision Contradiction",
+  "description": "Verifies that proposing an external cloud service (AWS DynamoDB) directly contradicts an existing offline network constraint and triggers an active conflict warning.",
+  "expected_conflicts": [
+    {
+      "type": "CONSTRAINT_DECISION_CONTRADICTION",
+      "severity": "WARNING",
+      "statement_a_must_contain": "offline",
+      "statement_b_must_contain": "AWS",
+      "impact": "Project constraint mandates offline execution, but decision introduces cloud dependency."
+    }
+  ],
+  "expected_decisions": [],
+  "expected_constraints": [
+    {
+      "statement_must_contain": "offline",
+      "cluster": "OFFLINE_NETWORK"
+    }
+  ]
+}

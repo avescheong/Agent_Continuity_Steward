@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCS-HUD: Session Continuity Steward</title>
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/hud.css">
+  <!-- __SCS_TOKEN_INJECTION__ -->
+  <script>
+    window.addEventListener('error', (e) => {
+      console.error('[SCS Frontend Error]', e.message, e.filename, e.lineno);
+    });
+  </script>
+</head>
+<body>
+  <!-- Micro Pill Bar (Mode 1 & Header) -->
+  <header id="pill-container"></header>
+
+  <!-- Tactical Drawer (Mode 2) -->
+  <main id="drawer-area" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+    <!-- Active Mission & Session Strip -->
+    <section id="mission-container"></section>
+
+    <!-- Conversation Checkpoint Fragment Buffer Strip -->
+    <section id="fragment-container"></section>
+
+    <!-- Human Approval Boundary Quarantine Inbox -->
+    <section id="inbox-container"></section>
+
+    <!-- Navigation Tab Bar -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="tasks">Tasks</button>
+      <button class="tab-btn" data-tab="decisions">Decisions</button>
+      <button class="tab-btn" data-tab="artifacts">Artifacts</button>
+      <button class="tab-btn" data-tab="snapshots">Snapshots</button>
+    </nav>
+
+    <!-- Main Content Tab Pane -->
+    <section id="content-pane" class="content-pane"></section>
+  </main>
+
+  <!-- Modal Overlays -->
+  <div id="capture-modal-container"></div>
+  <div id="handover-modal-container"></div>
+  <div id="bootstrap-modal-container"></div>
+  <div id="checkpoint-modal-container"></div>
+  <div id="dialog-modal-container"></div>
+
+  <!-- Non-intrusive Toasts -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

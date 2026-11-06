@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Private Continuity Vaults (Centralized external vaults recommended)
+.continuity/
+*.continuity
+
+# OS Generated Artifacts
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment & Credentials
+.env
+.env.*
+*.pem
+*.key
