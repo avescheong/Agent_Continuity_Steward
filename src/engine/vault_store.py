@@ -21,6 +21,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
+import subprocess
 
 # ---------------------------------------------------------------------------
 # Import core_adapter safely from current directory
@@ -668,12 +669,44 @@ def append_staging_proposals(
     return added
 
 
+def resolve_author(author_arg: Optional[str] = None) -> str:
+    """Resolves author/operator identity using FDB-101-003 attribution hierarchy:
+    1. Explicit CLI / function argument
+    2. git config user.name
+    3. System environment (USER or USERNAME)
+    4. Deterministic fallback: 'human-operator'
+    """
+    if author_arg and str(author_arg).strip():
+        return str(author_arg).strip()
+
+    try:
+        res = subprocess.run(
+            ["git", "config", "user.name"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+
+    env_user = os.getenv("USER") or os.getenv("USERNAME")
+    if env_user and env_user.strip():
+        return env_user.strip()
+
+    return "human-operator"
+
+
 def promote_proposals(
     vault_dir: Union[str, Path],
     proposal_ids: Optional[List[str]] = None,
     promote_all: bool = False,
     label: str = "Human custody approval",
     allow_unverified: bool = False,
+    author: Optional[str] = None,
+    approved_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Promotes selected/all PENDING proposals from staging into canonical/ledger.json.
 
@@ -752,8 +785,12 @@ def promote_proposals(
     tsk_list = ledger.setdefault("tasks", [])
     art_list = ledger.setdefault("artifacts", [])
 
+    default_operator = resolve_author(approved_by or author)
+
     for p in to_promote:
         ptype = p.get("proposal_type", "DECISION").upper()
+        item_author = p.get("author") or author or default_operator
+        item_approver = approved_by or default_operator
         stmt = p.get("statement") or p.get("title") or ""
         why = p.get("why") or p.get("rationale_why") or "Approved by operator"
 
@@ -778,6 +815,8 @@ def promote_proposals(
                     "impact_scope": p.get("impact_scope", ""),
                     "source_excerpt": p.get("evidence_quote") or p.get("source_excerpt", ""),
                     "is_active": True,
+                    "author": item_author,
+                    "approved_by": item_approver,
                     "created_at": utc_now_iso(),
                     "updated_at": utc_now_iso(),
                 })
@@ -801,6 +840,8 @@ def promote_proposals(
                     "impact_scope": p.get("impact_scope", ""),
                     "source_excerpt": p.get("evidence_quote", ""),
                     "is_active": True,
+                    "author": item_author,
+                    "approved_by": item_approver,
                     "created_at": utc_now_iso(),
                     "updated_at": utc_now_iso(),
                 })
@@ -824,6 +865,8 @@ def promote_proposals(
                     "impact_scope": p.get("impact_scope", ""),
                     "source_excerpt": p.get("evidence_quote", ""),
                     "is_active": True,
+                    "author": item_author,
+                    "approved_by": item_approver,
                     "created_at": utc_now_iso(),
                     "updated_at": utc_now_iso(),
                 })
@@ -860,6 +903,8 @@ def promote_proposals(
                     "why_it_matters": why,
                     "blocker_reason": p.get("blocker_reason", ""),
                     "sort_order": len(tsk_list) + 1,
+                    "author": item_author,
+                    "approved_by": item_approver,
                     "created_at": utc_now_iso(),
                     "updated_at": utc_now_iso(),
                     "completed_at": comp_at,
@@ -1081,6 +1126,10 @@ def render_markdown_views(
             dec_lines.append(f"- **Why Decided:** {d.get('rationale_why') or 'Ratified by operator'}")
             if d.get("impact_scope"):
                 dec_lines.append(f"- **Impact Scope:** {d.get('impact_scope')}")
+            if d.get("author") or d.get("approved_by"):
+                a_val = d.get("author") or "N/A"
+                appr_val = d.get("approved_by") or a_val
+                dec_lines.append(f"- **Author / Approved By:** {a_val} / {appr_val}")
             if d.get("source_excerpt"):
                 dec_lines.append(f"- **Source Evidence:** \"{d.get('source_excerpt')}\"")
             dec_lines.append("")

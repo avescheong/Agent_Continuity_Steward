@@ -231,18 +231,45 @@ def is_markdown_table_or_test_line(line: str) -> bool:
     return False
 
 
+def is_progress_chatter(line_or_title: str) -> bool:
+    """Returns True if the line or title is subagent progress chatter or heartbeats.
+
+    FDB-101-006: Deterministic filtering for obvious progress chatter:
+    - [Progress: 3/10]
+    - Turn 4 of 12
+    - Processing step 5
+    - Step 2: running test
+    - Heartbeat: ...
+    """
+    if not line_or_title:
+        return False
+    t = str(line_or_title).strip()
+    patterns = [
+        r"^\[Progress:\s*\d+/\d+\]",
+        r"^Turn\s+\d+\s+of\s+\d+",
+        r"^Processing\s+step\s+\d+",
+        r"^Step\s+\d+:\s*(?:running|evaluating|searching|scanning|executing|testing)\b",
+        r"^Heartbeat:\s*",
+        r"^\[(?:Progress|Heartbeat)\]",
+    ]
+    for pat in patterns:
+        if re.search(pat, t, re.IGNORECASE):
+            return True
+    return False
+
+
 def sanitize_dialogue_for_extraction(text: str) -> str:
     """Pre-filters raw dialogue before passing to upstream Caveman extraction engine.
 
-    Removes markdown tables, test matrices, and status checklists that cause
-    the proposition sanitizer to extract degenerated tokens like 'Adopt count'.
+    Removes markdown tables, test matrices, status checklists, and subagent progress
+    chatter (FDB-101-006) that cause the proposition sanitizer to extract degenerated tokens.
     """
     if not text:
         return ""
     lines = text.splitlines()
     cleaned_lines = []
     for line in lines:
-        if is_markdown_table_or_test_line(line):
+        if is_markdown_table_or_test_line(line) or is_progress_chatter(line):
             continue
         cleaned_lines.append(line)
     return "\n".join(cleaned_lines)
@@ -266,6 +293,9 @@ def validate_decision_title(title: str, reasoning: str = "") -> Tuple[bool, str]
 
     if "|" in t or t.startswith("#") or t.startswith("---"):
         return (False, "Contains markdown table or document structure formatting")
+
+    if is_progress_chatter(t):
+        return (False, "Matches subagent progress chatter pattern (FDB-101-006)")
 
     # Must contain at least 2 words (subject + action)
     words = t.split()
@@ -620,15 +650,31 @@ def harden_extracted_context(
             })
     extracted.rejected_options = valid_rejected
 
-    # 4. Task Reconciliation Hardening
+    # 4. Task Reconciliation Hardening & Noise Suppression (FDB-101-006)
     extracted.pending_tasks = reconcile_task_lifecycle(extracted.pending_tasks, root_paths)
     still_pending = []
     for t in extracted.pending_tasks:
+        stmt = t.get("title", "") or t.get("statement", "")
+        if is_progress_chatter(stmt):
+            extracted.unclassified_context.append({
+                "source": "tasks",
+                "statement": stmt,
+                "reason": "Subagent progress chatter noise suppression (FDB-101-006)",
+                "confidence": "LOW",
+            })
+            continue
         if t.get("status") == "COMPLETED" or t.get("task_status") == "COMPLETED":
             extracted.completed_tasks.append(t)
         else:
             still_pending.append(t)
     extracted.pending_tasks = still_pending
+
+    valid_completed = []
+    for t in extracted.completed_tasks:
+        stmt = t.get("title", "") or t.get("statement", "")
+        if not is_progress_chatter(stmt):
+            valid_completed.append(t)
+    extracted.completed_tasks = valid_completed
 
     return extracted
 

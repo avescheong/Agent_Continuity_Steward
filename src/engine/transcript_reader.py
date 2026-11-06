@@ -535,3 +535,257 @@ def extract_session_dialogue(ses_content: str) -> str:
         if len(parts) >= 3:
             return parts[2].strip()
     return ses_content.strip()
+
+
+# ---------------------------------------------------------------------------
+# Tier 3: Direct Markdown File Ingestion (FDB-101-014)
+# ---------------------------------------------------------------------------
+
+def parse_markdown_session_turns(content: str) -> List[Dict[str, Any]]:
+    """Parses speaker turns from a markdown session file.
+
+    FDB-101-014: Recognizes common dialogue patterns:
+    - Human / User / Operator: <text>
+    - AI / Assistant / Model / Claude / Gemini: <text>
+    - Markdown bold or header turns: **User:**, **AI:**, ### Human, ### AI
+    - Blockquote markers: > User: ..., > AI: ...
+
+    If no explicit speaker headers are matched, the content is preserved
+    in its entirety as an AI dialogue turn so downstream Caveman extraction
+    can process architectural propositions without loss.
+    """
+    if not content:
+        return []
+
+    lines = content.splitlines()
+    turns: List[Dict[str, Any]] = []
+    current_speaker: Optional[str] = None
+    current_lines: List[str] = []
+    turn_idx = 0
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    human_pattern = re.compile(
+        r"^(?:>\s*)?(?:#+\s*)?(?:\*\*)?(?:Human|User|Operator|Developer|Engineer)(?:\*\*)?:\s*(.*)$",
+        re.IGNORECASE,
+    )
+    ai_pattern = re.compile(
+        r"^(?:>\s*)?(?:#+\s*)?(?:\*\*)?(?:AI|Assistant|Model|Antigravity|Claude|Gemini)(?:\*\*)?:\s*(.*)$",
+        re.IGNORECASE,
+    )
+
+    for line in lines:
+        stripped = line.strip()
+        m_human = human_pattern.match(stripped)
+        m_ai = ai_pattern.match(stripped)
+
+        if m_human:
+            if current_speaker and current_lines:
+                body = "\n".join(current_lines).strip()
+                if body:
+                    norm = normalize_turn_text(body, is_human=(current_speaker == "Human"))
+                    turns.append({
+                        "speaker": current_speaker,
+                        "step_index": turn_idx,
+                        "created_at": now_iso,
+                        "raw_content": body,
+                        "normalized_content": norm,
+                        "turn_hash": compute_turn_hash(current_speaker, norm),
+                    })
+                    turn_idx += 1
+            current_speaker = "Human"
+            initial_text = m_human.group(1).strip()
+            current_lines = [initial_text] if initial_text else []
+        elif m_ai:
+            if current_speaker and current_lines:
+                body = "\n".join(current_lines).strip()
+                if body:
+                    norm = normalize_turn_text(body, is_human=(current_speaker == "Human"))
+                    turns.append({
+                        "speaker": current_speaker,
+                        "step_index": turn_idx,
+                        "created_at": now_iso,
+                        "raw_content": body,
+                        "normalized_content": norm,
+                        "turn_hash": compute_turn_hash(current_speaker, norm),
+                    })
+                    turn_idx += 1
+            current_speaker = "AI"
+            initial_text = m_ai.group(1).strip()
+            current_lines = [initial_text] if initial_text else []
+        else:
+            if current_speaker is not None:
+                current_lines.append(line)
+            else:
+                current_lines.append(line)
+
+    if current_lines:
+        body = "\n".join(current_lines).strip()
+        if body:
+            speaker = current_speaker or "AI"
+            norm = normalize_turn_text(body, is_human=(speaker == "Human"))
+            turns.append({
+                "speaker": speaker,
+                "step_index": turn_idx,
+                "created_at": now_iso,
+                "raw_content": body,
+                "normalized_content": norm,
+                "turn_hash": compute_turn_hash(speaker, norm),
+            })
+
+    return turns
+
+
+def capture_markdown_file_evidence(
+    vault_dir: Union[str, Path],
+    file_path: Union[str, Path],
+    conversation_id: Optional[str] = None,
+    session_time: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Captures a standalone markdown session file directly into an immutable SES file.
+
+    FDB-101-014: Allows headless/CI environments or external files without
+    an active Antigravity conversation directory.
+
+    Args:
+        vault_dir: Path to project .continuity/ vault.
+        file_path: Path to external markdown session file.
+        conversation_id: Optional identifier (auto-generated if omitted).
+        session_time: Optional explicit timestamp.
+
+    Returns:
+        Session capture result dictionary identical in structure to capture_session_evidence.
+    """
+    f_path = Path(file_path).resolve()
+    if not f_path.exists() or not f_path.is_file():
+        raise FileNotFoundError(f"Input markdown session file not found: {f_path}")
+
+    raw_content = f_path.read_text(encoding="utf-8", errors="ignore")
+    turns = parse_markdown_session_turns(raw_content)
+
+    if not turns:
+        return {
+            "captured": False,
+            "reason": "FILE_IS_EMPTY",
+        }
+
+    v_paths = vault_store.get_vault_paths(vault_dir) if vault_store else {
+        "vault_dir": Path(vault_dir).resolve(),
+        "manifest_json": Path(vault_dir).resolve() / "evidence" / "MANIFEST.json",
+        "raw_sessions_dir": Path(vault_dir).resolve() / "evidence" / "raw_sessions",
+        "staging_dir": Path(vault_dir).resolve() / "staging",
+    }
+
+    manifest_file = v_paths["manifest_json"]
+    manifest = {}
+    if manifest_file.exists():
+        manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+    else:
+        manifest = {
+            "schema_version": "scs-manifest/1.0",
+            "project_code": "PROJ",
+            "next_session_num": 1,
+            "next_archive_num": 1,
+            "watermarks_by_conversation": {},
+            "sessions": [],
+            "archives": [],
+        }
+
+    conv_id = conversation_id or f"file-{hashlib.sha256(f_path.name.encode('utf-8')).hexdigest()[:12]}"
+    watermarks = manifest.setdefault("watermarks_by_conversation", {})
+
+    now_dt = session_time or datetime.now(timezone.utc)
+    date_str = now_dt.strftime("%Y%m%d")
+    time_str = now_dt.strftime("%H%M")
+    dt_str = f"{date_str}_{time_str}"
+    now_iso = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    next_num = manifest.get("next_session_num", 1)
+    session_id = f"SES{next_num:03d}"
+    filename = f"{session_id}_{dt_str}.md"
+    ses_file = v_paths["raw_sessions_dir"] / filename
+
+    first_step = turns[0]["step_index"]
+    last_step = turns[-1]["step_index"]
+    first_hash = turns[0]["turn_hash"]
+    last_hash = turns[-1]["turn_hash"]
+
+    dialogue_lines: List[str] = []
+    for t in turns:
+        dialogue_lines.append(f"{t['speaker']}:\n{t['normalized_content']}\n")
+    dialogue_text = "\n".join(dialogue_lines).strip()
+
+    proj_code = manifest.get("project_code", "PROJ")
+
+    frontmatter_template = (
+        "---\n"
+        f"session_id: {session_id}_{dt_str}\n"
+        f"session_code: {session_id}\n"
+        f"project_code: {proj_code}\n"
+        f"conversation_id: {conv_id}\n"
+        f"captured_at: '{now_iso}'\n"
+        f"capture_source: DIRECT_FILE\n"
+        f"source_file: {f_path.name}\n"
+        f"turn_count: {len(turns)}\n"
+        f"first_step_index: {first_step}\n"
+        f"last_step_index: {last_step}\n"
+        f"first_turn_hash: {first_hash}\n"
+        f"last_turn_hash: {last_hash}\n"
+        "sha256: {sha256_placeholder}\n"
+        "---\n\n"
+    )
+
+    content_sha256 = hashlib.sha256(dialogue_text.encode("utf-8")).hexdigest()
+    full_ses_content = frontmatter_template.format(sha256_placeholder=content_sha256) + dialogue_text + "\n"
+
+    v_paths["raw_sessions_dir"].mkdir(parents=True, exist_ok=True)
+    ses_file.write_text(full_ses_content, encoding="utf-8")
+
+    watermarks[conv_id] = {
+        "last_step_index": last_step,
+        "last_turn_hash": last_hash,
+        "last_session_id": session_id,
+        "updated_at": now_iso,
+    }
+
+    manifest.setdefault("sessions", []).append({
+        "session_id": session_id,
+        "file_path": f"evidence/raw_sessions/{filename}",
+        "captured_at": now_iso,
+        "conversation_id": conv_id,
+        "turn_count": len(turns),
+        "first_step_index": first_step,
+        "last_step_index": last_step,
+        "sha256": content_sha256,
+        "consolidated_in": None,
+    })
+    manifest["next_session_num"] = next_num + 1
+
+    manifest_file.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    archive_triggered = False
+    archive_file = None
+    if next_num % 10 == 0 and vault_store:
+        archive_file = vault_store.prepare_10_session_archive(
+            vault_dir=v_paths["vault_dir"],
+            archive_title=f"Consolidated archive for sessions through {session_id}",
+        )
+        archive_triggered = archive_file is not None
+
+    return {
+        "captured": True,
+        "session_id": session_id,
+        "file_name": filename,
+        "file_path": str(ses_file),
+        "turn_count": len(turns),
+        "sha256": content_sha256,
+        "first_step_index": first_step,
+        "last_step_index": last_step,
+        "first_turn_hash": first_hash,
+        "last_turn_hash": last_hash,
+        "archive_triggered": archive_triggered,
+        "archive_file": archive_file,
+        "dialogue_text": dialogue_text,
+    }

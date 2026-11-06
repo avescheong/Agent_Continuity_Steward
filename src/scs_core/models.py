@@ -238,6 +238,8 @@ class DecisionRecord(BaseModel):
     source_excerpt: str = ""
     source_proposal_id: Optional[str] = None
     is_active: bool = True
+    author: Optional[str] = None
+    approved_by: Optional[str] = None
     created_at: str = Field(default_factory=utc_now_iso)
     updated_at: str = Field(default_factory=utc_now_iso)
 
@@ -256,6 +258,8 @@ class TaskItem(BaseModel):
     depends_on_task_ids: List[str] = Field(default_factory=list)
     source_proposal_id: Optional[str] = None
     sort_order: int = 0
+    author: Optional[str] = None
+    approved_by: Optional[str] = None
     created_at: str = Field(default_factory=utc_now_iso)
     updated_at: str = Field(default_factory=utc_now_iso)
     completed_at: Optional[str] = None

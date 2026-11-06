@@ -15,6 +15,7 @@ This module is the unified entrypoint for all SCS operations in Antigravity:
 import os
 import sys
 import json
+import hashlib
 import argparse
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
@@ -190,13 +191,22 @@ def cmd_switch(args: argparse.Namespace) -> int:
 
 def cmd_record(args: argparse.Namespace) -> int:
     """Captures conversation dialogue into an immutable SES file and stages Caveman proposals."""
-    conv_id = args.conv_id or auto_detect_conversation_id(args.app_data)
+    file_arg = getattr(args, "file_path", None)
+    file_p = None
+    if file_arg:
+        file_p = Path(file_arg).resolve()
+        if not file_p.exists() or not file_p.is_file():
+            print(f"{ERR_SYM} Input file not found or not readable: {file_arg}", file=sys.stderr)
+            return 1
+        conv_id = getattr(args, "conv_id", None) or f"file-{hashlib.sha256(file_p.name.encode('utf-8')).hexdigest()[:12]}"
+    else:
+        conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id(args.app_data)
+        if not conv_id:
+            print(f"{ERR_SYM} Missing conversation ID. Provide via --conv-id <UUID>, --file <PATH>, or CONVERSATION_ID env var.", file=sys.stderr)
+            return 1
+
     proj_arg = getattr(args, "project_flag", None) or getattr(args, "project", None)
     args.project = proj_arg
-
-    if not conv_id:
-        print(f"{ERR_SYM} Missing conversation ID. Provide via --conv-id <UUID> or CONVERSATION_ID env var.", file=sys.stderr)
-        return 1
 
     try:
         vault_path = vault_store.resolve_project_vault(
@@ -212,12 +222,20 @@ def cmd_record(args: argparse.Namespace) -> int:
         return 1
 
     # 1. Capture session evidence & watermark slicing
-    print(f"Recording conversation `{conv_id[:8]}...` into vault: {vault_path.parent.name}...")
-    capture_res = transcript_reader.capture_session_evidence(
-        vault_dir=vault_path,
-        conversation_id=conv_id,
-        app_data_dir=args.app_data,
-    )
+    if file_p:
+        print(f"Recording markdown session file `{file_p.name}` into vault: {vault_path.parent.name}...")
+        capture_res = transcript_reader.capture_markdown_file_evidence(
+            vault_dir=vault_path,
+            file_path=file_p,
+            conversation_id=conv_id,
+        )
+    else:
+        print(f"Recording conversation `{conv_id[:8]}...` into vault: {vault_path.parent.name}...")
+        capture_res = transcript_reader.capture_session_evidence(
+            vault_dir=vault_path,
+            conversation_id=conv_id,
+            app_data_dir=args.app_data,
+        )
 
     if not capture_res.get("captured"):
         print(f"ℹ No new dialogue turns recorded ({capture_res.get('reason')}).")
@@ -244,18 +262,22 @@ def cmd_record(args: argparse.Namespace) -> int:
     )
 
     # 3. Transform extracted items into candidate proposals for staging quarantine
+    author_val = getattr(args, "author", None)
     candidate_proposals: List[Dict[str, Any]] = []
 
     # Decisions
     for d in extracted.decisions:
-        candidate_proposals.append({
+        p_dict = {
             "proposal_type": "DECISION",
             "statement": getattr(d, "title", str(d)),
             "why": getattr(d, "reasoning", "Extracted causal decision"),
             "impact_scope": getattr(d, "alternatives_considered", ""),
             "evidence_quote": getattr(d, "evidence_quote", ""),
             "source_session_code": ses_id,
-        })
+        }
+        if author_val:
+            p_dict["author"] = author_val
+        candidate_proposals.append(p_dict)
 
     # Constraints
     for c in extracted.constraints:
@@ -477,6 +499,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
 
         p_ids_to_promote = p_ids if not is_all else None
         force = getattr(args, "force", False)
+        author_arg = getattr(args, "author", None)
 
         res = vault_store.promote_proposals(
             vault_dir=vault_path,
@@ -484,6 +507,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
             promote_all=is_all or (not p_ids_to_promote),
             label=args.label or "Human custody approval",
             allow_unverified=force,
+            author=author_arg,
         )
 
         if res.get("blocked_count", 0) > 0:
@@ -945,6 +969,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_record = subparsers.add_parser("record", help="Record incremental session evidence")
     p_record.add_argument("project", nargs="?", default=None, help="Optional project code or directory")
     p_record.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory (flag syntax)")
+    p_record.add_argument("--file", dest="file_path", default=None, help="Direct markdown session file path to ingest (bypasses Antigravity UUID)")
+    p_record.add_argument("--author", dest="author", default=None, help="Author/contributor attribution for recorded session")
     p_record.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_record.add_argument("--app-data", help="Custom Antigravity appData directory")
     p_record.set_defaults(func=cmd_record)
@@ -962,6 +988,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_approve.add_argument("--all", action="store_true", help="Approve all pending proposals")
     p_approve.add_argument("--force", action="store_true", help="Force promotion bypassing quality invariant warnings")
     p_approve.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory")
+    p_approve.add_argument("--author", dest="author", default=None, help="Author/operator attribution identity (default: git/user identity)")
     p_approve.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_approve.add_argument("--label", help="Reason for approval update")
     p_approve.set_defaults(func=cmd_approve)
