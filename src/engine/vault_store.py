@@ -1555,3 +1555,119 @@ def resolve_project_vault(
         "Please specify project via `--project <CODE>`.",
         candidate_vaults=discovered,
     )
+
+
+# ---------------------------------------------------------------------------
+# Function 10: Handover Package Generator (FDB-101-002, FDB-101-011)
+# ---------------------------------------------------------------------------
+
+def generate_handover_package(
+    vault_dir: Union[str, Path],
+    profile: str = "standard",
+) -> Dict[str, Any]:
+    """Compiles and writes Master AI Handover Package and Fast Recovery Card.
+
+    FDB-101-002: Supports 'compact', 'standard', and 'deep' briefing depth profiles.
+
+    Args:
+        vault_dir: Path to project .continuity/ vault or project root.
+        profile: Depth profile: 'compact', 'standard', or 'deep' (default: 'standard').
+
+    Returns:
+        Handover compilation dictionary containing package contents, files, and hashes.
+    """
+    paths = get_vault_paths(vault_dir)
+    ledger = read_ledger(paths["vault_dir"], verify_seal=True)
+    proj = ledger.get("project", {})
+    proj_code = proj.get("code", "PROJ")
+
+    # 1. Physical artifact custody reconciliation
+    artifacts = ledger.get("artifacts", [])
+    configured_roots = proj.get("root_paths", [str(Path(vault_dir).resolve().parent)])
+    all_roots = list(configured_roots)
+    if str(paths["vault_dir"]) not in all_roots:
+        all_roots.append(str(paths["vault_dir"]))
+    if str(paths["vault_dir"].parent) not in all_roots:
+        all_roots.append(str(paths["vault_dir"].parent))
+
+    rec_summary = core_adapter.reconcile_artifacts(
+        artifacts=artifacts,
+        root_paths=all_roots,
+    )
+
+    # 2. Gather approved continuity chapter archives
+    manifest = {}
+    if paths["manifest_json"].exists():
+        manifest = json.loads(paths["manifest_json"].read_text(encoding="utf-8"))
+
+    chapters: List[Dict[str, Any]] = []
+    for arch in manifest.get("archives", []):
+        arch_file = paths["archives_dir"] / arch.get("file_name", "")
+        if arch_file.exists():
+            chapters.append({
+                "chapter_code": arch.get("archive_code"),
+                "markdown_content": arch_file.read_text(encoding="utf-8"),
+                "snapshot_code": "SEALED",
+                "created_at": arch.get("created_at"),
+            })
+
+    total_sessions = len(manifest.get("sessions", []))
+    session_counts = {
+        "total_sessions": total_sessions,
+        "processed_sessions": total_sessions,
+        "pending_sessions": 0,
+    }
+
+    # 3. Gather snapshot metadata
+    snapshots = list_snapshots(paths["vault_dir"])
+    latest_snap_code = snapshots[-1]["snapshot_code"] if snapshots else "SNP-BASELINE"
+    latest_snap_sha = snapshots[-1]["checksum_sha256"] if snapshots else ("0" * 64)
+
+    snapshot_mock = {
+        "snapshot_code": latest_snap_code,
+        "checksum_sha256": latest_snap_sha,
+        "state_json": json.dumps(ledger, indent=2, sort_keys=True),
+    }
+
+    all_decision_records = []
+    for d in ledger.get("decisions", []):
+        d_item = dict(d)
+        d_item.setdefault("record_kind", "DECISION")
+        all_decision_records.append(d_item)
+    for c in ledger.get("constraints", []):
+        c_item = dict(c)
+        c_item.setdefault("record_kind", "CONSTRAINT")
+        all_decision_records.append(c_item)
+    for r in ledger.get("rejected_options", []):
+        r_item = dict(r)
+        r_item.setdefault("record_kind", "REJECTED_OPTION")
+        all_decision_records.append(r_item)
+
+    # 4. Generate handover context
+    handover_res = core_adapter.generate_handover_context(
+        project=proj,
+        snapshot=snapshot_mock,
+        decisions=all_decision_records,
+        tasks=ledger.get("tasks", []),
+        artifacts=artifacts,
+        chapters=chapters,
+        session_counts=session_counts,
+        profile=profile,
+    )
+
+    # 5. Persist to .continuity/handover/
+    handover_dir = paths["handover_dir"]
+    handover_dir.mkdir(parents=True, exist_ok=True)
+
+    ho_file = handover_dir / f"{proj_code}_AI_HANDOVER_PACKAGE.md"
+    ho_file.write_text(handover_res["handover_content"], encoding="utf-8")
+
+    rec_file = handover_dir / f"{proj_code}_PROJECT_RECOVERY_CARD.md"
+    rec_file.write_text(handover_res["recovery_card_content"], encoding="utf-8")
+
+    handover_res["handover_file"] = str(ho_file)
+    handover_res["recovery_file"] = str(rec_file)
+    handover_res["verified_artifacts"] = rec_summary.get("verified_count", 0)
+    handover_res["total_artifacts"] = rec_summary.get("total_artifacts", 0)
+
+    return handover_res

@@ -20,6 +20,7 @@ import os
 import sys
 import re
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
 
@@ -1141,21 +1142,32 @@ def _adapt_decisions(items: List[Any], project_id: str) -> List[DecisionRecord]:
         if isinstance(d, DecisionRecord):
             results.append(d)
         elif isinstance(d, dict):
-            kind_str = d.get("record_kind", "DECISION")
+            kind_str = d.get("record_kind")
+            if not kind_str:
+                code_str = str(d.get("code") or "")
+                if code_str.startswith("CON-"):
+                    kind_str = "CONSTRAINT"
+                elif code_str.startswith("REJ-"):
+                    kind_str = "REJECTED_OPTION"
+                else:
+                    kind_str = "DECISION"
             kind_enum = getattr(DecisionKind, kind_str, DecisionKind.DECISION)
-            results.append(
-                DecisionRecord(
-                    id=d.get("id") or f"dec_{idx:03d}",
-                    project_id=project_id,
-                    code=d.get("code") or f"DEC-{idx:03d}",
-                    record_kind=kind_enum,
-                    statement=d.get("statement") or d.get("title") or "",
-                    rationale_why=d.get("rationale_why") or d.get("why") or "",
-                    impact_scope=d.get("impact_scope") or "",
-                    source_excerpt=d.get("source_excerpt") or "",
-                    is_active=d.get("is_active", True),
-                )
+            rec = DecisionRecord(
+                id=d.get("id") or f"dec_{idx:03d}",
+                project_id=project_id,
+                code=d.get("code") or f"DEC-{idx:03d}",
+                record_kind=kind_enum,
+                statement=d.get("statement") or d.get("title") or "",
+                rationale_why=d.get("rationale_why") or d.get("why") or "",
+                impact_scope=d.get("impact_scope") or "",
+                source_excerpt=d.get("source_excerpt") or "",
+                is_active=d.get("is_active", True),
             )
+            if "author" in d:
+                rec.author = d["author"]
+            if "approved_by" in d:
+                rec.approved_by = d["approved_by"]
+            results.append(rec)
         else:
             results.append(d)
     return results
@@ -1172,19 +1184,24 @@ def _adapt_tasks(items: List[Any], project_id: str) -> List[TaskItem]:
             status_enum = getattr(TaskStatus, status_str, TaskStatus.PENDING)
             prio_str = t.get("priority", "MEDIUM")
             prio_enum = getattr(TaskPriority, prio_str, TaskPriority.MEDIUM)
-            results.append(
-                TaskItem(
-                    id=t.get("id") or f"tsk_{idx:03d}",
-                    project_id=project_id,
-                    code=t.get("code") or f"TSK-{idx:03d}",
-                    title=t.get("title") or "",
-                    status=status_enum,
-                    priority=prio_enum,
-                    why_it_matters=t.get("why_it_matters") or t.get("why") or "",
-                    source_excerpt=t.get("source_excerpt") or "",
-                    blocker_reason=t.get("blocker_reason") or "",
-                )
+            rec = TaskItem(
+                id=t.get("id") or f"tsk_{idx:03d}",
+                project_id=project_id,
+                code=t.get("code") or f"TSK-{idx:03d}",
+                title=t.get("title") or "",
+                status=status_enum,
+                priority=prio_enum,
+                why_it_matters=t.get("why_it_matters") or t.get("why") or "",
+                source_excerpt=t.get("source_excerpt") or "",
+                blocker_reason=t.get("blocker_reason") or "",
             )
+            if "completed_evidence" in t:
+                rec.completed_evidence = t["completed_evidence"]
+            if "completed_by_verification" in t:
+                rec.completed_by_verification = t["completed_by_verification"]
+            if "completed_at" in t:
+                rec.completed_at = t["completed_at"]
+            results.append(rec)
         else:
             results.append(t)
     return results
@@ -1220,6 +1237,237 @@ def _adapt_artifacts(items: List[Any], project_id: str) -> List[ArtifactRecord]:
     return results
 
 
+
+
+# ---------------------------------------------------------------------------
+# Handover Depth Profiles: compact & deep (FDB-101-002)
+# ---------------------------------------------------------------------------
+
+def compile_compact_handover_package(
+    proj: Any,
+    snapshot: Any,
+    decisions: List[Any],
+    tasks: List[Any],
+    chapters: List[Dict[str, Any]],
+    session_counts: Dict[str, int],
+    sync_footer: str = "",
+) -> str:
+    """FDB-101-002: Compiles a high-density executive restart briefing (~300 words).
+
+    Prioritizes active state, constraints, and immediate next tasks for ultra-fast AI rehydration.
+    """
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    clean_next = proj.next_action if proj.next_action else "Review active tasks and proceed."
+
+    active_decisions = [d for d in decisions if getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "DECISION"]
+    active_constraints = [d for d in decisions if getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "CONSTRAINT"]
+    rejected_options = [d for d in decisions if getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "REJECTED_OPTION"]
+    pending_tasks = [t for t in tasks if getattr(t, "status", None) and t.status.value in ("IN_PROGRESS", "BLOCKED", "PENDING")]
+
+    lines = [
+        f"# ⚡ AI REHYDRATION BRIEFING (COMPACT) — {proj.name} ({proj.code})",
+        f"- **Protocol:** `scs-handover/1.0` (profile: `compact`)",
+        f"- **Snapshot Code:** `{snapshot.snapshot_code}`",
+        f"- **Seal SHA-256:** `{snapshot.checksum_sha256[:16]}...`",
+        f"- **Generated At:** `{now_str}`",
+        "",
+        "> **PURPOSE:** High-density restart briefing. Prioritizes active state, frozen boundaries, and immediate next actions for instant AI continuation without historical re-questioning.",
+        "",
+        "## 1. Operational Focus & Immediate Action",
+        f"- **Primary Objective:** {proj.objective or 'N/A'}",
+        f"- **Current Focus:** {proj.current_focus or 'N/A'}",
+        f"- **Immediate Next Action:** 👉 **{clean_next}**",
+        "",
+        "## 2. Active Governance Constraints & Boundaries",
+    ]
+
+    if active_constraints:
+        for c in active_constraints:
+            lines.append(f"- **[{c.code}]** {c.statement}")
+    else:
+        lines.append("- *(No active constraints recorded)*")
+
+    lines.append("")
+    lines.append("## 3. Essential Architectural Decisions")
+    if active_decisions:
+        for d in active_decisions[:7]:
+            why = f" *(Why: {d.rationale_why})*" if d.rationale_why else ""
+            lines.append(f"- **[{d.code}]** {d.statement}{why}")
+        if len(active_decisions) > 7:
+            lines.append(f"- *(+{len(active_decisions) - 7} more decisions in canonical memory)*")
+    else:
+        lines.append("- *(No active decisions recorded)*")
+
+    lines.append("")
+    lines.append("## 4. Immediate Pending Tasks")
+    if pending_tasks:
+        for t in pending_tasks[:5]:
+            blk = f" — **BLOCKER:** {t.blocker_reason}" if getattr(t, "blocker_reason", "") else ""
+            lines.append(f"- [ ] **[{t.code}]** {t.title} `[{t.status.value}]`{blk}")
+        if len(pending_tasks) > 5:
+            lines.append(f"- *(+{len(pending_tasks) - 5} more pending tasks in canonical memory)*")
+    else:
+        lines.append("- *(All active tasks completed)*")
+
+    if rejected_options:
+        lines.append("")
+        lines.append("## 5. Authoritative Do-Not-Repeat Registry")
+        for r in rejected_options[:5]:
+            lines.append(f"- ⛔ **[{r.code}]** {r.statement} *(Why rejected: {r.rationale_why or 'Not viable'})*")
+
+    if sync_footer:
+        lines.append("")
+        lines.append(sync_footer)
+
+    return "\n".join(lines) + "\n"
+
+
+def compile_deep_handover_package(
+    proj: Any,
+    snapshot: Any,
+    decisions: List[Any],
+    tasks: List[Any],
+    artifacts: List[Any],
+    chapters: List[Dict[str, Any]],
+    session_counts: Dict[str, int],
+    sync_footer: str = "",
+) -> str:
+    """FDB-101-002: Compiles an exhaustive forensic audit handover package (~2,000+ words).
+
+    Includes full evidence quotes, alternatives considered, author/approver attribution,
+    completed task verification logs, artifact custody hashes, and chapter archive details.
+    """
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    clean_next = proj.next_action if proj.next_action else "Review active tasks and proceed."
+
+    active_decisions = [d for d in decisions if getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "DECISION"]
+    superseded_decisions = [d for d in decisions if not getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "DECISION"]
+    active_constraints = [d for d in decisions if getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "CONSTRAINT"]
+    rejected_options = [d for d in decisions if getattr(d, "is_active", True) and getattr(d, "record_kind", None) and d.record_kind.value == "REJECTED_OPTION"]
+
+    completed_tasks = [t for t in tasks if getattr(t, "status", None) and t.status.value == "COMPLETED"]
+    active_tasks = [t for t in tasks if getattr(t, "status", None) and t.status.value in ("IN_PROGRESS", "BLOCKED", "PENDING")]
+
+    lines = [
+        f"# 🔬 MASTER AI HANDOVER & AUDIT PACKAGE (DEEP) — {proj.name} ({proj.code})",
+        f"- **Package Type:** Master AI Continuity Restoration Package (`scs-handover/1.0`, profile: `deep`)",
+        f"- **Snapshot Code:** `{snapshot.snapshot_code}`",
+        f"- **Seal SHA-256:** `{snapshot.checksum_sha256}`",
+        f"- **Generated At:** `{now_str}`",
+        f"- **Continuity Coverage:** `{len(chapters)}` Continuity Chapter(s) | `{session_counts.get('processed_sessions', 0)}/{session_counts.get('total_sessions', 0)}` session(s) sealed",
+        "",
+        "> **EXHAUSTIVE AUDIT PURPOSE:** Deep forensic handover package restoring complete multi-session project intelligence: full causal decision rationales with evidence quotes, alternatives considered, author and approver attribution, rejected approaches with failure analysis, completed task verification logs, and complete artifact custody with SHA-256 integrity hashes.",
+        "",
+        "## 1. Executive Summary & Operational Telemetry",
+        f"- **Current Objective:** {proj.objective or 'N/A'}",
+        f"- **Current Focus:** {proj.current_focus or 'N/A'}",
+        f"- **Immediate Next Action:** 👉 **{clean_next}**",
+        f"- **Operational Telemetry:** `{len(active_decisions)}` Active Decisions | `{len(active_constraints)}` Governance Constraints | `{len(rejected_options)}` Rejected Approaches | `{len(completed_tasks)}` Completed Tasks | `{len(active_tasks)}` Remaining Tasks",
+        "",
+        "## 2. System Architecture & Component Topology",
+        compile_architecture_overview(proj.code, proj.name),
+        "",
+        "## 3. Detailed Decision History & Forensic Attribution",
+    ]
+
+    if active_decisions:
+        for d in active_decisions:
+            lines.append(f"### [{d.code}] {d.statement}")
+            lines.append(f"- **Rationale & Why:** {d.rationale_why or 'Ratified by operator'}")
+            if getattr(d, "impact_scope", ""):
+                lines.append(f"- **Impact Scope & Alternatives Considered:** {d.impact_scope}")
+            if getattr(d, "author", None) or getattr(d, "approved_by", None):
+                a_str = getattr(d, "author", None) or "N/A"
+                appr_str = getattr(d, "approved_by", None) or a_str
+                lines.append(f"- **Author / Approved By:** {a_str} / {appr_str}")
+            if getattr(d, "source_excerpt", ""):
+                lines.append(f"- **Forensic Source Evidence:** \"{d.source_excerpt}\"")
+            lines.append("")
+    else:
+        lines.append("- *(No active decisions recorded)*\n")
+
+    if superseded_decisions:
+        lines.append("### 3.1 Superseded & Retired Decisions")
+        for sd in superseded_decisions:
+            lines.append(f"- **[RETIRED {sd.code}]** *{sd.statement}* — Retired during project evolution (Original rationale: {sd.rationale_why or 'N/A'})")
+        lines.append("")
+
+    lines.append("## 4. Authoritative Do-Not-Repeat Registry (Rejected Options)")
+    if rejected_options:
+        for r in rejected_options:
+            lines.append(f"### ⛔ [{r.code}] {r.statement}")
+            lines.append(f"- **Why Rejected:** {r.rationale_why or 'Not aligned with architectural constraints'}")
+            if getattr(r, "impact_scope", ""):
+                lines.append(f"- **Scope Evaluated:** {r.impact_scope}")
+            if getattr(r, "source_excerpt", ""):
+                lines.append(f"- **Evidence Quote:** \"{r.source_excerpt}\"")
+            lines.append("")
+    else:
+        lines.append("- *(No rejected approaches recorded)*\n")
+
+    lines.append("## 5. Governance Constraints & Frozen Architectural Boundaries")
+    if active_constraints:
+        for c in active_constraints:
+            why_part = f" *(Scope: {c.rationale_why})*" if c.rationale_why else ""
+            lines.append(f"- **[{c.code}]** {c.statement}{why_part}")
+    else:
+        lines.append("- *(No constraints recorded)*")
+
+    lines.append("")
+    lines.append("## 6. Continuity Chapter Archives & Historical Evolution")
+    if chapters:
+        for idx, ch in enumerate(chapters, 1):
+            ch_code = ch.get("chapter_code") or f"Continuity_Chapter_{idx:02d}"
+            snap = ch.get("snapshot_code", "SEALED")
+            created = ch.get("created_at", "N/A")
+            lines.append(f"### Chapter `{ch_code}` (Seal: `{snap}`, Archived: `{created}`)")
+            c_text = ch.get("markdown_content", "").strip()
+            summary_lines = [cl for cl in c_text.splitlines() if cl.strip() and not cl.startswith("#")][:6]
+            if summary_lines:
+                lines.append("\n".join(summary_lines))
+            else:
+                lines.append("- Approved continuity archive chapter.")
+            lines.append("")
+    else:
+        lines.append("- *(No consolidated continuity chapter archives generated yet)*\n")
+
+    lines.append("## 7. Operational Work State & Task Verification Logs")
+    if completed_tasks:
+        lines.append("### 7.1 Verified Completed Tasks")
+        for t in completed_tasks:
+            comp_time = getattr(t, "completed_at", None) or "Completed"
+            verified = " [VERIFIED ON DISK]" if getattr(t, "completed_by_verification", False) else ""
+            lines.append(f"- [x] **[{t.code}]** {t.title}{verified}")
+            lines.append(f"  - **Why It Mattered:** {t.why_it_matters or 'N/A'}")
+            if getattr(t, "completed_evidence", ""):
+                lines.append(f"  - **Verification Evidence:** {t.completed_evidence}")
+            lines.append(f"  - **Completed Timestamp:** {comp_time}")
+        lines.append("")
+
+    if active_tasks:
+        lines.append("### 7.2 Active Remaining Tasks")
+        for t in active_tasks:
+            blk = f" — **BLOCKER:** {t.blocker_reason}" if getattr(t, "blocker_reason", "") else ""
+            lines.append(f"- [ ] **[{t.code}]** {t.title} `[{t.status.value}]` *(Priority: {t.priority.value})*{blk}")
+            if getattr(t, "why_it_matters", ""):
+                lines.append(f"  - **Purpose:** {t.why_it_matters}")
+        lines.append("")
+    elif not completed_tasks:
+        lines.append("- *(No tasks recorded in canonical ledger)*\n")
+
+    lines.append("## 8. Artifact Physical Custody Manifest")
+    if artifacts:
+        for a in artifacts:
+            sha = getattr(a, "observed_sha256", None) or "Unsealed"
+            lines.append(f"- `{a.name}` — **Status:** `{a.custody_state.value}` | **Rel Path:** `{a.relative_path or 'None'}` | **SHA-256:** `{sha}`")
+    else:
+        lines.append("- *(No artifacts tracked)*")
+
+    if sync_footer:
+        lines.append("")
+        lines.append(sync_footer)
+
+    return "\n".join(lines) + "\n"
 def generate_handover_context(
     project: Any,
     snapshot: Any,
@@ -1229,6 +1477,7 @@ def generate_handover_context(
     chapters: Optional[List[Dict[str, Any]]] = None,
     session_counts: Optional[Dict[str, int]] = None,
     sync_footer: Optional[str] = None,
+    profile: str = "standard",
 ) -> Dict[str, Any]:
     """Generates the master AI handover package, executive briefing, and fast recovery card.
 
@@ -1283,36 +1532,60 @@ def generate_handover_context(
     footer = sync_footer if sync_footer is not None else UNIVERSAL_SYNC_FOOTER
 
     engine = CavemanContextExtractionEngine()
+    profile_lower = (profile or "standard").strip().lower()
 
-    # 1. Master AI Handover Package
-    raw_handover = engine.compile_ai_handover_package(
-        proj=proj,
-        snapshot=snp,
-        decisions=ad_decisions,
-        tasks=ad_tasks,
-        artifacts=ad_artifacts,
-        chapters=safe_chapters,
-        session_counts=safe_session_counts,
-        sync_footer=footer,
-    )
-
-    # Phase 1.6 Hardening: Inject mandatory Architecture Overview section
-    arch_overview = compile_architecture_overview(proj.code, proj.name)
-    if "## 2. Project Evolution & Continuity Chapter History" in raw_handover:
-        raw_handover = raw_handover.replace(
-            "## 2. Project Evolution & Continuity Chapter History",
-            f"{arch_overview}\n\n## 2. Project Evolution & Continuity Chapter History",
-            1,
+    # 1. Master AI Handover Package (Depth Profiles: compact, standard, deep)
+    if profile_lower == "compact":
+        raw_handover = compile_compact_handover_package(
+            proj=proj,
+            snapshot=snp,
+            decisions=ad_decisions,
+            tasks=ad_tasks,
+            chapters=safe_chapters,
+            session_counts=safe_session_counts,
+            sync_footer=footer,
         )
-    elif "## 2." in raw_handover:
-        raw_handover = re.sub(
-            r"(## 2\.[^\n]+)",
-            f"{arch_overview}\n\n\\1",
-            raw_handover,
-            count=1,
+    elif profile_lower == "deep":
+        raw_handover = compile_deep_handover_package(
+            proj=proj,
+            snapshot=snp,
+            decisions=ad_decisions,
+            tasks=ad_tasks,
+            artifacts=ad_artifacts,
+            chapters=safe_chapters,
+            session_counts=safe_session_counts,
+            sync_footer=footer,
         )
     else:
-        raw_handover += f"\n\n{arch_overview}\n"
+        # Standard profile (Default v1.0.1 certified baseline)
+        raw_handover = engine.compile_ai_handover_package(
+            proj=proj,
+            snapshot=snp,
+            decisions=ad_decisions,
+            tasks=ad_tasks,
+            artifacts=ad_artifacts,
+            chapters=safe_chapters,
+            session_counts=safe_session_counts,
+            sync_footer=footer,
+        )
+
+        # Inject Architecture Overview section into standard profile
+        arch_overview = compile_architecture_overview(proj.code, proj.name)
+        if "## 2. Project Evolution & Continuity Chapter History" in raw_handover:
+            raw_handover = raw_handover.replace(
+                "## 2. Project Evolution & Continuity Chapter History",
+                f"{arch_overview}\n\n## 2. Project Evolution & Continuity Chapter History",
+                1,
+            )
+        elif "## 2." in raw_handover:
+            raw_handover = re.sub(
+                r"(## 2\.[^\n]+)",
+                f"{arch_overview}\n\n\\1",
+                raw_handover,
+                count=1,
+            )
+        else:
+            raw_handover += f"\n\n{arch_overview}\n"
 
     # Clean up templating verb duplications (e.g. 'Use Read...' -> 'Read...')
     raw_handover = re.sub(
@@ -1372,6 +1645,7 @@ def generate_handover_context(
 
     return {
         "protocol_version": "scs-handover/1.0",
+        "profile": profile_lower,
         "file_name": file_name,
         "human_file_name": human_file_name,
         "recovery_file_name": recovery_file_name,

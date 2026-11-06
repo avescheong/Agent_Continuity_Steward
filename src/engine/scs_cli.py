@@ -643,92 +643,41 @@ def cmd_handover(args: argparse.Namespace) -> int:
     try:
         conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
         proj_arg = getattr(args, "project_flag", None) or getattr(args, "project", None)
+        profile = getattr(args, "profile", "standard") or "standard"
+        to_stdout = getattr(args, "to_stdout", False)
+        card_only = getattr(args, "card_only", False)
         args.project = proj_arg
+
         vault_path = vault_store.resolve_project_vault(project_arg=proj_arg, conversation_id=conv_id)
-        ledger = vault_store.read_ledger(vault_path, verify_seal=True)
-        proj = ledger.get("project", {})
-        proj_code = proj.get("code", "PROJ")
 
-        # 1. Run physical artifact custody reconciliation
-        artifacts = ledger.get("artifacts", [])
-        configured_roots = proj.get("root_paths", [str(vault_path.parent)])
-        all_roots = list(configured_roots)
-        if str(vault_path) not in all_roots:
-            all_roots.append(str(vault_path))
-        if str(vault_path.parent) not in all_roots:
-            all_roots.append(str(vault_path.parent))
-
-        rec_summary = core_adapter.reconcile_artifacts(
-            artifacts=artifacts,
-            root_paths=all_roots,
+        # Generate handover package via vault_store with specified profile
+        handover_res = vault_store.generate_handover_package(
+            vault_dir=vault_path,
+            profile=profile,
         )
 
-        # 2. Gather approved continuity chapter archives
-        paths = vault_store.get_vault_paths(vault_path)
-        manifest = {}
-        if paths["manifest_json"].exists():
-            manifest = json.loads(paths["manifest_json"].read_text(encoding="utf-8"))
+        # Output handling: clean piping to stdout without banner noise
+        if card_only:
+            sys.stdout.write(handover_res["recovery_card_content"])
+            if not handover_res["recovery_card_content"].endswith("\n"):
+                sys.stdout.write("\n")
+            sys.stdout.flush()
+            return 0
 
-        chapters: List[Dict[str, Any]] = []
-        for arch in manifest.get("archives", []):
-            arch_file = paths["archives_dir"] / arch.get("file_name", "")
-            if arch_file.exists():
-                chapters.append({
-                    "chapter_code": arch.get("archive_code"),
-                    "markdown_content": arch_file.read_text(encoding="utf-8"),
-                    "snapshot_code": "SEALED",
-                    "created_at": arch.get("created_at"),
-                })
+        if to_stdout:
+            sys.stdout.write(handover_res["handover_content"])
+            if not handover_res["handover_content"].endswith("\n"):
+                sys.stdout.write("\n")
+            sys.stdout.flush()
+            return 0
 
-        total_sessions = len(manifest.get("sessions", []))
-        session_counts = {
-            "total_sessions": total_sessions,
-            "processed_sessions": total_sessions,
-            "pending_sessions": 0,
-        }
-
-        # 3. Compile Master AI Handover Package
-        snapshots = vault_store.list_snapshots(vault_path)
-        latest_snap_code = snapshots[-1]["snapshot_code"] if snapshots else "SNP-BASELINE"
-        latest_snap_sha = snapshots[-1]["checksum_sha256"] if snapshots else ("0" * 64)
-
-        snapshot_mock = {
-            "snapshot_code": latest_snap_code,
-            "checksum_sha256": latest_snap_sha,
-            "state_json": json.dumps(ledger, indent=2, sort_keys=True),
-        }
-
-        all_decision_records = (
-            ledger.get("decisions", [])
-            + ledger.get("constraints", [])
-            + ledger.get("rejected_options", [])
-        )
-
-        handover_res = core_adapter.generate_handover_context(
-            project=proj,
-            snapshot=snapshot_mock,
-            decisions=all_decision_records,
-            tasks=ledger.get("tasks", []),
-            artifacts=artifacts,
-            chapters=chapters,
-            session_counts=session_counts,
-        )
-
-        # 4. Save to .continuity/handover/
-        handover_dir = paths["handover_dir"]
-        handover_dir.mkdir(parents=True, exist_ok=True)
-
-        ho_file = handover_dir / f"{proj_code}_AI_HANDOVER_PACKAGE.md"
-        ho_file.write_text(handover_res["handover_content"], encoding="utf-8")
-
-        rec_file = handover_dir / f"{proj_code}_PROJECT_RECOVERY_CARD.md"
-        rec_file.write_text(handover_res["recovery_card_content"], encoding="utf-8")
-
+        # Normal file generation feedback
         print(f"{OK_SYM} Generated Master AI Continuity Restoration Package:")
-        print(f"  Package:       {ho_file} ({handover_res['protocol_version']})")
-        print(f"  Recovery Card: {rec_file}")
+        print(f"  Package:       {handover_res['handover_file']} ({handover_res['protocol_version']})")
+        print(f"  Profile:       {profile}")
+        print(f"  Recovery Card: {handover_res['recovery_file']}")
         print(f"  Checksum SHA:  {handover_res['checksum_sha256'][:16]}...")
-        print(f"  Artifacts:     {rec_summary['verified_count']}/{rec_summary['total_artifacts']} verified physically")
+        print(f"  Artifacts:     {handover_res.get('verified_artifacts', 0)}/{handover_res.get('total_artifacts', 0)} verified physically")
         return 0
     except Exception as exc:
         print(f"{ERR_SYM} Error generating handover package: {exc}", file=sys.stderr)
@@ -1009,6 +958,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_handover = subparsers.add_parser("handover", help="Generate master AI handover restoration package")
     p_handover.add_argument("project", nargs="?", default=None, help="Optional project code or directory")
     p_handover.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory (flag syntax)")
+    p_handover.add_argument("--profile", dest="profile", choices=["compact", "standard", "deep"], default="standard", help="Handover briefing depth profile: compact, standard, or deep (default: standard)")
+    p_handover.add_argument("--stdout", "--print", dest="to_stdout", action="store_true", help="Print generated handover package directly to stdout")
+    p_handover.add_argument("--card-only", dest="card_only", action="store_true", help="Print only the concise Fast Recovery Card directly to stdout")
     p_handover.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_handover.set_defaults(func=cmd_handover)
 
