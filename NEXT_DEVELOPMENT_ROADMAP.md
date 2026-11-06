@@ -150,6 +150,16 @@ Milestone `v1.1.0` directly addresses operational friction identified in the Pha
 - **Detailed Design:**
   - Standardize all subcommands to accept both positional and `--project` flags interchangeably.
 
+#### 3.10 Specification 1.1.10: Staging Proposals Defensive Normalization
+- **Motivation (`FDB-101-013`):** If an external tool or script writes a raw JSON list `[...]` to `pending_proposals.json` rather than wrapping it in `{"protocol": ..., "proposals": [...]}`, `st.get("proposals")` raises an uncaught `AttributeError`.
+- **Detailed Design:**
+  - Add defensive type check in `vault_store.read_staging`: if parsed JSON is a `list`, normalize it to `{"protocol": "scs-staging/1.0", "proposals": parsed_list}`.
+
+#### 3.11 Specification 1.1.11: Standalone Dialogue File Ingestion (`scs record --file`)
+- **Motivation (`FDB-101-014`):** When running outside Google Antigravity, `scs record` fails with missing conversation ID error. Developers need to record from markdown meeting notes or local session logs directly.
+- **Detailed Design:**
+  - Add `--file <PATH>` to `scs record`. When provided, extract normative continuity entities (`Decision:`, `Constraint:`) directly from the specified file and stage them without requiring Antigravity transcript logs.
+
 ---
 
 ### 4. Milestone `v1.2.0` — Compaction, Discovery & Scale
@@ -191,6 +201,13 @@ flowchart LR
   2. Active process environment: `SCS_VAULT_PATH`
   3. Local workspace vault: `./.scs_vault/` (co-located in git repo)
   4. Centralized user vault: `~/.scs/vaults/<cwd_name>/` (out-of-repo default)
+
+#### 4.3 Specification 1.2.3: Standalone Snapshot Management CLI
+- **Motivation (`FDB-101-015`):** While snapshots are sealed automatically, operators currently have no dedicated CLI command to inspect snapshot history, compare seals, or view snapshot metadata.
+- **Detailed Design:**
+  - Introduce `scs snapshot` command group:
+    - `scs snapshot list [project]` $\rightarrow$ Tabular chronological list of snapshot codes, seals, decisions, and timestamps.
+    - `scs snapshot inspect [project] <CODE>` $\rightarrow$ Detailed view of decisions, tasks, and state seals within a historical snapshot.
 
 ---
 

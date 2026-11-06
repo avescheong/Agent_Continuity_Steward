@@ -40,7 +40,7 @@ flowchart TD
 
 ---
 
-### 2. Operational Feedback Master Intake Matrix (Items 001–012)
+### 2. Operational Feedback Master Intake Matrix (Items 001–015)
 
 | Feedback ID | Date | Scenario | Subsystem | Sev | Summary | Target Milestone | Status | Source Record |
 | :--- | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: |
@@ -56,6 +56,9 @@ flowchart TD
 | **`FDB-101-010`** | 2026-11-06 | `SCN-TEAM` | `COMP-EXTR` | **P2** | Decision deduplication evades match when dialogue contains trailing period (`.` vs bare) | `v1.1.0` | `TRIAGED` | [`Update #001`](V1_X_FEEDBACK_UPDATE_001.md) |
 | **`FDB-101-011`** | 2026-11-06 | `SCN-PERS` | `COMP-DOCS` | **P2** | CLI stdout displays execution synopsis while full 10k-character recovery package is in file | `v1.1.0` / Docs | `TRIAGED` | [`Update #001`](V1_X_FEEDBACK_UPDATE_001.md) |
 | **`FDB-101-012`** | 2026-11-06 | `SCN-CLI` | `COMP-CLI` | **P2** | Positional vs `--project` flag inconsistency across subcommands (`status`/`record` vs `approve`) | `v1.1.0` | `TRIAGED` | [`Update #001`](V1_X_FEEDBACK_UPDATE_001.md) |
+| **`FDB-101-013`** | 2026-11-06 | `SCN-ONBD` | `COMP-VAULT` | **P2** | `read_staging` crashes on raw JSON list with `AttributeError: 'list' object has no attribute 'get'` | `v1.1.0` | `TRIAGED` | [`Update #002`](V1_X_FEEDBACK_UPDATE_002.md) |
+| **`FDB-101-014`** | 2026-11-06 | `SCN-ONBD` | `COMP-CLI` | **P2** | `scs record` outside Antigravity requires UUID; lacks `--file <PATH>` direct file ingestion | `v1.1.0` | `TRIAGED` | [`Update #002`](V1_X_FEEDBACK_UPDATE_002.md) |
+| **`FDB-101-015`** | 2026-11-06 | `SCN-PERS` | `COMP-CLI` | **P3** | Lack of dedicated snapshot exploration CLI commands (`scs snapshot list` / `inspect`) | `v1.2.0` | `TRIAGED` | [`Update #002`](V1_X_FEEDBACK_UPDATE_002.md) |
 
 ---
 
@@ -64,14 +67,15 @@ flowchart TD
 Detailed evidence, verbatim operator transcripts, root cause analyses, and proposed engineering solutions for all feedback items are cataloged in:
 - **Baseline Feedback Dossiers (001–008):** Ingested during Phase 13 Milestone 13.1 foundation.
 - **Feedback Update #001 (009–012):** [`V1_X_FEEDBACK_UPDATE_001.md`](V1_X_FEEDBACK_UPDATE_001.md) — Ingested following Phase 13 Milestone 13.2 clean-room adoption simulations.
+- **Feedback Update #002 (013–015):** [`V1_X_FEEDBACK_UPDATE_002.md`](V1_X_FEEDBACK_UPDATE_002.md) — Ingested following Phase 13 Milestone 13.5 external developer experience validation.
 
 ---
 
 ### 4. Consolidated Triage Status
 
 - **Critical Regressions (Sev-1):** **0** — Production baseline `v1.0.1 GA` is 100% stable, secure, and unmodified.
-- **Ergonomic Enhancements (Sev-2):** **9 items** scheduled for Milestone `v1.1.0` on `develop`.
-- **Architectural Expansions (Sev-3):** **2 items** scheduled for Milestone `v1.2.0` / `v2.0.0`.
+- **Ergonomic Enhancements (Sev-2):** **11 items** scheduled for Milestone `v1.1.0` on `develop`.
+- **Architectural Expansions (Sev-3):** **3 items** scheduled for Milestone `v1.2.0` / `v2.0.0`.
 - **Documentation Polish (Sev-4):** **1 item** resolved in `docs/QUICKSTART.md`.
 
 ---
