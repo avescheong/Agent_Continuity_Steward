@@ -42,7 +42,7 @@ timeline
 | Milestone | Target Branch | Primary Focus | Key Capabilities | Schema Impact | Dependency Rule |
 | :--- | :---: | :--- | :--- | :---: | :---: |
 | **`v1.0.1 GA`** | `main` | **Production Baseline** | Zero-dep stdlib core, 134 tests, PyPA layout, dual rollback syntax | `scs-ledger/1.0` | **Zero (0)** (Stdlib only) |
-| **`v1.1.0`** | `develop` | **Ergonomics & Collaboration** | Batch approve/reject, handover profiles, author attribution, git pre-commit hook | Backward compatible | **Zero (0)** (Stdlib only) |
+| **`v1.1.0`** | `develop` | **Ergonomics & Collaboration** | Batch approve/reject, handover profiles, author attribution, git hook, flag aliases, punctuation dedup | Backward compatible | **Zero (0)** (Stdlib only) |
 | **`v1.2.0`** | `develop` | **Compaction & Discovery** | Tier-2 chapter archiving (Session 10+), hierarchical vault precedence, rich CLI status | Backward compatible | **Zero (0)** (Stdlib only) |
 | **`v2.0.0`** | `develop` / `v2.x` | **Scale & Tooling Ecosystem** | Optional SQLite shadow index, optional filesystem watcher, native IDE extensions | `scs-ledger/2.0` | Zero for core; optional plugins |
 
@@ -129,6 +129,26 @@ Milestone `v1.1.0` directly addresses operational friction identified in the Pha
     - `r"^Turn\s+\d+\s+of\s+\d+"`
     - `r"^Step\s+\d+:\s*(?:running|evaluating|searching)\b"`
   - Ensure zero conversational status strings enter Tier 2 quarantine.
+
+#### 3.6 Specification 1.1.6: Dual Flag Syntax for `scs new`
+- **Motivation (`FDB-101-009`):** External developers onboarding via `QUICKSTART.md` instinctively attempt flag syntax `scs new --code CODE --name NAME`, which triggers an argparse unrecognized argument error.
+- **Detailed Design:**
+  - Update `p_new` in `engine/scs_cli.py` to support dual syntax: positional `code name` and optional `--code` / `--name` flags.
+
+#### 3.7 Specification 1.1.7: Resilient Punctuation Normalization in Deduplication
+- **Motivation (`FDB-101-010`):** Dual candidate proposals are generated when dialogue contains identical decisions differing only by a trailing period (`.` vs bare).
+- **Detailed Design:**
+  - Apply `.strip().rstrip(".").lower()` normalization in `core_adapter.harden_extracted_context` and `vault_store.promote_proposals` to guarantee robust deduplication across AI phrasing variations.
+
+#### 3.8 Specification 1.1.8: Handover Standard Output Pipe Flag
+- **Motivation (`FDB-101-011`):** Developers expecting the complete Master AI Handover Package directly in terminal output may assume the concise stdout summary represents a truncated handover.
+- **Detailed Design:**
+  - Add `--print` / `--stdout` flag to `scs handover` to pipe the complete Master AI Handover Package directly to stdout for immediate LLM context consumption.
+
+#### 3.9 Specification 1.1.9: Universal Project Argument Acceptance
+- **Motivation (`FDB-101-012`):** Some subcommands (`record`, `status`, `handover`) accept positional `[project]`, while others (`approve`, `reject`, `rollback`) require `--project <ID>`.
+- **Detailed Design:**
+  - Standardize all subcommands to accept both positional and `--project` flags interchangeably.
 
 ---
 
