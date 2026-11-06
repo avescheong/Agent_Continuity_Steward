@@ -14,14 +14,19 @@
 
 ## 2. Installation & Verification
 
-Clone the repository and run the self-contained verification suite:
+Clone the repository and install as an editable package (or use direct module execution):
 
 ```powershell
 # 1. Clone repository
-git clone https://github.com/your-org/SCS_AG_v2.git
-cd SCS_AG_v2
+git clone https://github.com/avescheong/Agent_Continuity_Steward.git
+cd Agent_Continuity_Steward
 
-# 2. Run release verification script
+# 2. Option A: Install CLI executable (provides global 'scs' command)
+pip install -e .
+
+# 2. Option B: Zero install (use 'python -m engine.scs_cli' directly)
+
+# 3. Run release verification suite
 python scripts/verify_release.py
 ```
 
@@ -55,12 +60,13 @@ Expected output:
 Continuity vaults reside outside the project repository to prevent git commit bloat:
 
 ```powershell
-python -m engine.scs_cli new "Payment Gateway" \
-  --code PAY \
-  --objective "Build Stripe & PayPal integration" \
-  --vault "~/My_Project_Continuity/PAY" \
-  --roots "./PaymentGateway"
+scs new PAY "Payment Gateway" `
+  --path "$HOME\My_Project_Continuity\PAY" `
+  --repo "./PaymentGateway" `
+  --objective "Build Stripe & PayPal integration"
 ```
+
+*(Or zero-install: `python -m engine.scs_cli new PAY "Payment Gateway" ...`)*
 
 This creates an isolated `.continuity/` vault with an initial cryptographic seal `SNP-BASELINE`.
 

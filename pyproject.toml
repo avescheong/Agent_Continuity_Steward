@@ -39,6 +39,10 @@ classifiers = [
 [project.scripts]
 scs = "engine.scs_cli:main"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["engine*", "src*"]
+
 [project.urls]
 Homepage = "https://github.com/Agent-Continuity-Steward/Agent_Continuity_Steward"
 Documentation = "https://github.com/Agent-Continuity-Steward/Agent_Continuity_Steward/tree/main/docs"
