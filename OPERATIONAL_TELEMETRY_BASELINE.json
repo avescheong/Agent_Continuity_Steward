@@ -1,0 +1,85 @@
+{
+  "milestone": "Phase 13 Milestone 13.2",
+  "timestamp": "2026-11-06T21:05:00+08:00",
+  "baseline_version": "v1.0.1",
+  "wheel_file": "agent_continuity_steward-1.0.1-py3-none-any.whl",
+  "wheel_sha256": "75d42043cc217dc54b5ddcd6c1d49548a3fa0360d5bfc36139a6c2d365732089",
+  "environment": {
+    "os": "win32",
+    "python_version": "3.13.14",
+    "isolation": "clean_venv"
+  },
+  "scenarios": {
+    "SCN-ONBD": {
+      "install_duration_sec": 1.4158,
+      "project_creation_sec": 0.1344,
+      "total_journey_duration_sec": 2.5455,
+      "clean_venv_dependencies_count": 1,
+      "wheel_zero_deps_verified": true,
+      "first_snapshot_generated": true,
+      "first_handover_char_count": 10210,
+      "first_handover_word_count": 1122,
+      "status": "PASS"
+    },
+    "SCN-PERS": {
+      "setup_duration_sec": 0.1327,
+      "handover_duration_sec": 0.1413,
+      "handover_package_chars": 10575,
+      "handover_package_words": 1142,
+      "recovery_card_chars": 1321,
+      "recovery_card_words": 191,
+      "estimated_handover_tokens": 2644,
+      "recovery_accuracy": {
+        "decision_recovered": true,
+        "constraint_recovered": true,
+        "rejected_option_preserved": true,
+        "score_out_of_10": 10.0
+      },
+      "status": "PASS"
+    },
+    "SCN-PROJ": {
+      "milestone_1_seal": "14046da4bebb4127cd81943f3069b492ba9965f51cc5526daa4edec30665d16e",
+      "milestone_2_seal": "aee76fa41fbb94c6fde8af64df2473da5ef1966d1230394c283522413a0a94a0",
+      "milestone_3_seal": "55cb307d386876cba6698916e79214c31f7d5aaebf15932fd5bac9c567523e03",
+      "rollback_target": "SNP-20261106-003",
+      "post_rollback_seal_matched": true,
+      "tamper_detection_successful": true,
+      "tamper_recovery_verified": true,
+      "status": "PASS"
+    },
+    "SCN-TEAM": {
+      "proposals_quarantined_count": 5,
+      "unapproved_leakage_to_canonical": false,
+      "human_approval_gate_enforced": true,
+      "deduplication_exact_matched": false,
+      "decisions_promoted_count": 2,
+      "status": "PASS"
+    }
+  },
+  "observations": [
+    {
+      "observation_id": "OBS-13-001",
+      "scenario": "SCN-ONBD",
+      "subsystem": "COMP-CLI",
+      "severity": "P2",
+      "issue": "scs new requires positional 'code name' and rejects '--code CODE --name NAME'. External developers instinctively try flags.",
+      "proposed_improvement": "Add optional --code and --name flag aliases in v1.1.0."
+    },
+    {
+      "observation_id": "OBS-13-002",
+      "scenario": "SCN-TEAM",
+      "subsystem": "COMP-EXTR",
+      "severity": "P2",
+      "issue": "Decision extraction produced duplicate candidate proposals (2) because Caveman strips trailing periods while extract_explicit_architectural_decisions retained trailing period, evading title.lower() comparison.",
+      "proposed_improvement": "Add .rstrip('.') normalization in harden_extracted_context and promote_proposals for v1.1.0."
+    }
+  ],
+  "summary": {
+    "all_scenarios_passed": true,
+    "total_simulations_executed": 4,
+    "zero_external_dependency_verified": true,
+    "state_sealing_integrity_verified": true,
+    "human_custody_boundary_verified": true,
+    "rehydration_benchmark_met": true
+  }
+}
