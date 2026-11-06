@@ -375,6 +375,19 @@ def validate_rejected_option_statement(statement: str, why: str = "") -> Tuple[b
     return (True, "")
 
 
+def normalize_decision_title(title: str) -> str:
+    """Deterministically normalizes a decision title for robust deduplication.
+
+    FDB-101-010: Strips trailing punctuation (periods, colons, semicolons, asterisks)
+    and surrounding whitespace, converting to lower case.
+    """
+    if not title:
+        return ""
+    clean = str(title).strip()
+    clean = re.sub(r"[.:;*]+$", "", clean).strip()
+    return clean.lower()
+
+
 def extract_explicit_architectural_decisions(text: str) -> List[Dict[str, str]]:
     """Extracts high-fidelity explicit architectural decisions from dialogue.
 
@@ -387,6 +400,7 @@ def extract_explicit_architectural_decisions(text: str) -> List[Dict[str, str]]:
     if not text:
         return []
     results = []
+    seen_norm_titles = set()
     pattern = re.compile(
         r"^\s*[-*•]?\s*(?:\*\*)?(?:ADR-[0-9]+[A-Za-z0-9_-]*\s+)?(?:Architecture\s+)?Decision:\s*(?:\*\*)?\s*(.+)$",
         re.MULTILINE | re.IGNORECASE,
@@ -398,12 +412,15 @@ def extract_explicit_architectural_decisions(text: str) -> List[Dict[str, str]]:
 
         is_val, _ = validate_decision_title(stmt)
         if is_val and len(stmt) > 10:
-            results.append({
-                "title": stmt,
-                "reasoning": "Explicit architectural decision documented in session dialogue",
-                "evidence_quote": m.group(0).strip(),
-                "alternatives_considered": "",
-            })
+            norm_key = normalize_decision_title(stmt)
+            if norm_key not in seen_norm_titles:
+                seen_norm_titles.add(norm_key)
+                results.append({
+                    "title": stmt,
+                    "reasoning": "Explicit architectural decision documented in session dialogue",
+                    "evidence_quote": m.group(0).strip(),
+                    "alternatives_considered": "",
+                })
     return results
 
 
@@ -567,9 +584,12 @@ def harden_extracted_context(
 
     # 2. Extract Explicit Decisions
     explicit_decs = extract_explicit_architectural_decisions(raw_text)
+    seen_titles = {normalize_decision_title(d.title) for d in valid_decisions}
     for ed in explicit_decs:
-        # Avoid duplicate titles
-        if not any(d.title.lower() == ed["title"].lower() for d in valid_decisions):
+        norm_ed = normalize_decision_title(ed["title"])
+        # Avoid duplicate titles with trailing punctuation variations
+        if norm_ed not in seen_titles:
+            seen_titles.add(norm_ed)
             code_num = len(valid_decisions) + 1
             valid_decisions.append(CausalDecision(
                 code=f"DEC-{code_num:03d}",

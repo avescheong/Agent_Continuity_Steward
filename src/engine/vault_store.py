@@ -593,11 +593,32 @@ def list_snapshots(vault_dir: Union[str, Path]) -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 def read_staging(vault_dir: Union[str, Path]) -> Dict[str, Any]:
-    """Reads .continuity/staging/pending_proposals.json."""
+    """Reads .continuity/staging/pending_proposals.json with defensive normalization.
+
+    FDB-101-013: If pending_proposals.json contains a raw JSON list [...],
+    it is automatically normalized into the standard protocol dictionary format:
+    {"protocol": "scs-staging/1.0", "updated_at": <ISO>, "proposals": [...]}.
+    """
     paths = get_vault_paths(vault_dir)
     if not paths["pending_proposals_json"].exists():
         return {"protocol": "scs-staging/1.0", "proposals": []}
-    return json.loads(paths["pending_proposals_json"].read_text(encoding="utf-8"))
+    try:
+        data = json.loads(paths["pending_proposals_json"].read_text(encoding="utf-8"))
+    except Exception:
+        return {"protocol": "scs-staging/1.0", "proposals": []}
+
+    if isinstance(data, list):
+        return {
+            "protocol": "scs-staging/1.0",
+            "updated_at": utc_now_iso(),
+            "proposals": data,
+        }
+    if not isinstance(data, dict):
+        return {"protocol": "scs-staging/1.0", "proposals": []}
+
+    data.setdefault("protocol", "scs-staging/1.0")
+    data.setdefault("proposals", [])
+    return data
 
 
 def write_staging(vault_dir: Union[str, Path], staging_data: Dict[str, Any]) -> None:
@@ -737,8 +758,9 @@ def promote_proposals(
         why = p.get("why") or p.get("rationale_why") or "Approved by operator"
 
         if ptype == "DECISION":
+            norm_stmt = stmt.strip().rstrip(".:;*").strip().lower()
             existing_dec = next(
-                (d for d in dec_list if d.get("is_active") and d.get("statement", "").strip().lower() == stmt.strip().lower()),
+                (d for d in dec_list if d.get("is_active") and d.get("statement", "").strip().rstrip(".:;*").strip().lower() == norm_stmt),
                 None
             )
             if existing_dec:

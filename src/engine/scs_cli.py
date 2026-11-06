@@ -449,6 +449,32 @@ def cmd_approve(args: argparse.Namespace) -> int:
         args.proposals = p_ids
 
         vault_path = vault_store.resolve_project_vault(project_arg=project_arg, conversation_id=conv_id)
+        staging = vault_store.read_staging(vault_path)
+        staging_proposals = staging.get("proposals", [])
+
+        # FDB-101-005: Expand comma-separated tokens (e.g. 1,2,3) and resolve 1-based numeric indices
+        expanded_p_ids = []
+        if p_ids:
+            for item in p_ids:
+                sub_tokens = [t.strip() for t in str(item).split(",") if t.strip()]
+                for tok in sub_tokens:
+                    matched_id = None
+                    for p in staging_proposals:
+                        if str(p.get("id", "")).strip().lower() == tok.lower():
+                            matched_id = p.get("id")
+                            break
+                    if matched_id:
+                        expanded_p_ids.append(matched_id)
+                    elif tok.isdigit():
+                        idx = int(tok) - 1
+                        if 0 <= idx < len(staging_proposals):
+                            expanded_p_ids.append(staging_proposals[idx].get("id", tok))
+                        else:
+                            expanded_p_ids.append(tok)
+                    else:
+                        expanded_p_ids.append(tok)
+            p_ids = expanded_p_ids
+
         p_ids_to_promote = p_ids if not is_all else None
         force = getattr(args, "force", False)
 
@@ -491,22 +517,82 @@ def cmd_reject(args: argparse.Namespace) -> int:
         project_flag = getattr(args, "project_flag", None) or getattr(args, "project", None)
         pos1 = getattr(args, "pos_arg1", None) or getattr(args, "proposal_id", None)
         pos2 = getattr(args, "pos_arg2", None)
+        is_all = getattr(args, "all", False)
+        is_yes = getattr(args, "yes", False)
 
         if pos1 and pos2:
             project_arg = project_flag or pos1
             p_id = str(pos2).strip()
         else:
-            project_arg = project_flag
-            p_id = str(pos1).strip() if pos1 else ""
+            if is_all:
+                project_arg = project_flag or pos1
+                p_id = ""
+            else:
+                project_arg = project_flag
+                p_id = str(pos1).strip() if pos1 else ""
 
         args.project = project_arg
         args.proposal_id = p_id
 
-        if not p_id:
-            print(f"{ERR_SYM} Error rejecting proposal: Proposal ID required.", file=sys.stderr)
+        if not is_all and not p_id:
+            print(f"{ERR_SYM} Error rejecting proposal: Proposal ID or --all required.", file=sys.stderr)
             return 1
 
         vault_path = vault_store.resolve_project_vault(project_arg=project_arg, conversation_id=conv_id)
+        staging = vault_store.read_staging(vault_path)
+        staging_proposals = staging.get("proposals", [])
+
+        # FDB-101-005: Bulk discard staged proposals
+        if is_all:
+            count = len(staging_proposals)
+            if count == 0:
+                print("ℹ Staging quarantine is already empty. No proposals to discard.")
+                return 0
+
+            if not is_yes:
+                try:
+                    answer = input(f"Are you sure you want to discard all {count} staged proposal(s)? [y/N]: ").strip().lower()
+                except (EOFError, KeyboardInterrupt):
+                    print("\nOperation cancelled.")
+                    return 1
+                if answer not in ("y", "yes"):
+                    print("Operation cancelled.")
+                    return 0
+
+            if getattr(args, "record_why", False):
+                recorded_count = 0
+                for p in staging_proposals:
+                    p_code = p.get("id")
+                    if p_code:
+                        vault_store.reject_proposal(
+                            vault_dir=vault_path,
+                            proposal_id=p_code,
+                            why_rejected=args.why or "Bulk rejected by operator",
+                            record_as_do_not_repeat=True,
+                        )
+                        recorded_count += 1
+                print(f"{OK_SYM} Discarded and permanently recorded {recorded_count} proposal(s) into Do-Not-Repeat memory.")
+                return 0
+            else:
+                staging["proposals"] = []
+                staging["updated_at"] = vault_store.utc_now_iso()
+                vault_store.write_staging(vault_path, staging)
+                print(f"{OK_SYM} Discarded all {count} proposal(s) from staging quarantine.")
+                return 0
+
+        # Single proposal rejection: resolve exact ID or 1-based index
+        matched_id = None
+        for p in staging_proposals:
+            if str(p.get("id", "")).strip().lower() == p_id.lower():
+                matched_id = p.get("id")
+                break
+        if not matched_id and p_id.isdigit():
+            idx = int(p_id) - 1
+            if 0 <= idx < len(staging_proposals):
+                p_id = staging_proposals[idx].get("id", p_id)
+        elif matched_id:
+            p_id = matched_id
+
         res = vault_store.reject_proposal(
             vault_dir=vault_path,
             proposal_id=p_id,
@@ -882,8 +968,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     # reject
     p_reject = subparsers.add_parser("reject", help="Discard a staged proposal")
-    p_reject.add_argument("pos_arg1", metavar="proposal_id", help="Proposal ID to reject (or project code if 2 positional args)")
+    p_reject.add_argument("pos_arg1", nargs="?", default=None, metavar="proposal_id", help="Proposal ID/index to reject (or project code if 2 positional args)")
     p_reject.add_argument("pos_arg2", nargs="?", default=None, metavar="proposal_id", help="Proposal ID (if first arg is project)")
+    p_reject.add_argument("--all", action="store_true", help="Discard all pending staged proposals")
+    p_reject.add_argument("-y", "--yes", action="store_true", help="Bypass confirmation prompt for bulk discard")
     p_reject.add_argument("--why", help="Failure reason or rationale for rejection")
     p_reject.add_argument("--record-why", action="store_true", help="Permanently record in REJECTED_OPTIONS memory")
     p_reject.add_argument("--project", dest="project_flag", default=None, help="Target project code or directory")
