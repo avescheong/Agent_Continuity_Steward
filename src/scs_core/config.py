@@ -1,12 +1,12 @@
-"""Runtime configuration, paths, and constants for SCS-HUD."""
+"""Runtime configuration, paths, and constants for SCS Core reference implementation."""
 
 from pathlib import Path
 import os
 
-# Default workspace root is the project root containing src/
-WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
+# Default workspace root is the caller's working directory or SCS_WORKSPACE_ROOT override
+WORKSPACE_ROOT = Path(os.environ.get("SCS_WORKSPACE_ROOT", Path.cwd()))
 
-# Data directory can be overridden via environment variable (useful for testing)
+# Data directory can be overridden via environment variable (useful for testing or embedded vaults)
 DEFAULT_DATA_DIR = Path(os.environ.get("SCS_DATA_DIR", WORKSPACE_ROOT / "data"))
 
 # Sub-paths

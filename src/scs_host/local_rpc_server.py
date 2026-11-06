@@ -12,8 +12,8 @@ from starlette.staticfiles import StaticFiles
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.scs_core.ipc.dispatcher import SCSDispatcher
-from src.scs_host import win32_window
+from scs_core.ipc.dispatcher import SCSDispatcher
+from scs_host import win32_window
 
 
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"

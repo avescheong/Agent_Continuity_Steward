@@ -12,8 +12,8 @@ from typing import List, Optional, Tuple, Dict
 from datetime import datetime, timezone
 import json
 
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.models import ArtifactRecord, ArtifactCustodyState, ReconcileSummary, utc_now_iso
+from scs_core.db.database import VaultDatabase
+from scs_core.models import ArtifactRecord, ArtifactCustodyState, ReconcileSummary, utc_now_iso
 
 
 CHUNK_SIZE = 65536  # 64 KB read-only chunks

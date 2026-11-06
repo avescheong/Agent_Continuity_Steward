@@ -2,8 +2,8 @@
 
 import json
 from typing import List, Optional, Any
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.models import ArtifactRecord, ArtifactType, ArtifactCustodyState, utc_now_iso
+from scs_core.db.database import VaultDatabase
+from scs_core.models import ArtifactRecord, ArtifactType, ArtifactCustodyState, utc_now_iso
 
 
 class ArtifactRegistryService:

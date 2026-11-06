@@ -22,8 +22,8 @@ Measures:
 """
 
 import unittest
-from src.scs_core.modules.caveman_engine import CavemanContextExtractionEngine
-from src.scs_core.modules.caveman_context_validator import CavemanContextValidator
+from scs_core.modules.caveman_engine import CavemanContextExtractionEngine
+from scs_core.modules.caveman_context_validator import CavemanContextValidator
 
 
 class TestLongFormBenchmarks(unittest.TestCase):

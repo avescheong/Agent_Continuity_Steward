@@ -5,8 +5,8 @@ import sqlite3
 import hashlib
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from src.scs_core.db.database import VaultDatabase, next_entity_code
-from src.scs_core.models import Project, SnapshotRecord, utc_now_iso
+from scs_core.db.database import VaultDatabase, next_entity_code
+from scs_core.models import Project, SnapshotRecord, utc_now_iso
 
 
 class ProjectSessionService:

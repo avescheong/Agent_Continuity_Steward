@@ -21,10 +21,11 @@ Clone the repository and install as an editable package (or use direct module ex
 git clone https://github.com/avescheong/Agent_Continuity_Steward.git
 cd Agent_Continuity_Steward
 
-# 2. Option A: Install CLI executable (provides global 'scs' command)
-pip install -e .
+# 2. Option A: Standard installation (provides global 'scs' command)
+pip install .
 
-# 2. Option B: Zero install (use 'python -m engine.scs_cli' directly)
+# 2. Option B: Editable development installation
+pip install -e .
 
 # 3. Run release verification suite
 python scripts/verify_release.py
@@ -33,22 +34,37 @@ python scripts/verify_release.py
 Expected output:
 ```text
 ================================================================================
-🧭 SCS_AG_v2 Release Verification Suite
+[SCS_AG_v2] PRODUCTION RELEASE VERIFICATION SUITE
 ================================================================================
-[OK] Python version: 3.13.x (compatible >= 3.10)
-[OK] Standard library dependencies satisfied (zero external packages needed)
-[OK] Running automated test suite (124 tests)...
-     Engine Suite:   54 passed, 0 failures, 0 errors
-     Upstream Suite: 70 passed, 0 failures, 0 errors
-[OK] Test suite passed 100% (124/124 tests green)
-[OK] Core engine components verified:
-     - engine/vault_store.py
-     - engine/core_adapter.py
-     - engine/transcript_reader.py
-     - engine/scs_cli.py
-     - .agents/skills/scs/SKILL.md
+
+--- 1. Python Environment Check ---
+Detected Python Version: 3.13.x
+[OK] Python version satisfies minimum requirement (>= 3.10).
+
+--- 2. Dependency Verification ---
+[OK] All 10 standard library modules verified.
+[OK] Zero external third-party pip dependencies required.
+
+--- 3. Codebase Component Discovery ---
+[OK] Found: src\engine\vault_store.py
+[OK] Found: src\engine\core_adapter.py
+[OK] Found: src\engine\transcript_reader.py
+[OK] Found: src\engine\scs_cli.py
+[OK] Found: .agents\skills\scs\SKILL.md
+
+--- 4. Automated Conformance Test Suite (134 Tests) ---
+Ran 54 tests (Engine Suite: src/engine/) -> OK
+Ran 80 tests (Upstream Normative Suite: tests/) -> OK
+[OK] 100% Test Conformance Achieved (134/134 tests passing).
+
+--- 5. Live Vault Lifecycle Verification (Ephemeral Sandbox) ---
+[OK] Ephemeral vault created successfully.
+[OK] Baseline SHA-256 state seal verified intact.
+[OK] Proposal quarantine gate verified (1 item staged).
+[OK] Human custody promotion & SHA-256 re-sealing verified intact.
+
 ================================================================================
-🎉 RELEASE VERIFICATION SUCCESSFUL: System is ready for production use.
+[SUCCESS] RELEASE VERIFICATION SUCCESSFUL
 ================================================================================
 ```
 
@@ -139,8 +155,14 @@ When working inside Google Antigravity, the native skill routes slash commands d
 
 ## 5. Rollback to Prior Sealed State
 
-If an accidental change occurs, rollback to any sealed snapshot deterministically:
+If an accidental change occurs, rollback to any sealed snapshot deterministically. Both flag alias and positional syntax are supported:
 
 ```powershell
-python -m engine.scs_cli rollback --snapshot SNP-20261105-001 --project PAY
+# Option A: Flag syntax
+scs rollback --snapshot SNP-20261105-001 --project PAY
+
+# Option B: Positional syntax
+scs rollback SNP-20261105-001 --project PAY
 ```
+
+*(Or direct module execution: `python -m engine.scs_cli rollback --snapshot SNP-20261105-001 --project PAY`)*

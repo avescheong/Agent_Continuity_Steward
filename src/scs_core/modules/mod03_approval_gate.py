@@ -2,15 +2,15 @@
 
 import json
 from typing import List, Optional, Dict, Any
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.models import (
+from scs_core.db.database import VaultDatabase
+from scs_core.models import (
     Proposal, ProposalType, ProposalStatus,
     TaskStatus, TaskPriority, DecisionKind, ArtifactType,
     utc_now_iso,
 )
-from src.scs_core.modules.mod04_decision_ledger import DecisionLedgerService
-from src.scs_core.modules.mod05_checklist_engine import ChecklistEngineService
-from src.scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
+from scs_core.modules.mod04_decision_ledger import DecisionLedgerService
+from scs_core.modules.mod05_checklist_engine import ChecklistEngineService
+from scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
 
 
 class ApprovalGateService:

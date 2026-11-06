@@ -494,6 +494,113 @@ Observation → Evidence → Root Cause → Fix Proposal → Verification
 
 ---
 
+### Entry DFG-016 — Phase 10 General Availability (GA) Publication & Remote Verification (Session 14)
+- **Date:** 2026-11-06
+- **Evaluator:** Stability Engineer & Product Validator
+- **Observation:**
+  1. Clean-Room Export Executed: Fresh export from R&D workspace `F:\000_Ai Project\AI SCS HUD` to release repository `D:\000. GITHUB\Agent_Continuity_Steward` via `scripts/export_clean_repo.py`.
+  2. Pre-Commit Conformance Audit: Ran `python scripts/verify_release.py` on exported tree. 124/124 tests passed (100% conformance). Confirmed 0 private vaults (`.continuity`), 0 session transcripts, 0 machine paths, 0 hardcoded credentials, 0 `__pycache__` directories.
+  3. GA Release Commit Created: Staged all verified assets and committed with `chore(release): Agent Continuity Steward v1.0.0 General Availability` (Commit `319699738abc5b5020c7cd52883e9fc52a4933b7`).
+  4. Annotated Tag Created: `v1.0.0` (`76b8a737e7d6a2d5379bd206c7ab1247c27c3c34`) with message `"Release v1.0.0: Deterministic Session Continuity and Architecture Governance for AI Coding Agents"`.
+  5. Push & Remote Origin Verification: Successfully pushed `main` and `v1.0.0` to `https://github.com/avescheong/Agent_Continuity_Steward.git`. Queried remote via `git ls-remote origin`:
+     - `refs/heads/main` -> `319699738abc5b5020c7cd52883e9fc52a4933b7`
+     - `refs/tags/v1.0.0^{}` -> `319699738abc5b5020c7cd52883e9fc52a4933b7`
+     - Baseline tag `v0.9.0-rc1` remains frozen at `5f215fca7d04113807ea774df8a2893be3022e7a`.
+  6. Milestone Certified: Official General Availability (GA) attained. Release repository is frozen and working tree is clean.
+- **Evidence:**
+  - `docs/evidence/FINAL_V1_0_0_GO_NO_GO_REPORT.md`
+  - `docs/evidence/V1_0_0_PUBLICATION_CONFIRMATION.md`
+  - GitHub Remote: `https://github.com/avescheong/Agent_Continuity_Steward`
+- **Status:** **GENERAL AVAILABILITY (GA) PUBLISHED**
+
+---
+
+### Entry DFG-017 — Phase 11 Step 11.1 Clean External Installation Audit & Post-GA Defect Discovery (Session 15)
+- **Date:** 2026-11-06
+- **Evaluator:** Product Architecture & Stability Engineering
+- **Observation:**
+  1. Clean Environment Isolation Setup: Created fresh isolated virtual environments (`ExternalCloneUser\.venv` and `ExternalUserEnv\.venv`) with zero access to host developer user-site packages.
+  2. Defect `POST-GA-001` Identified (P1): `scs_core/models.py` imports `pydantic`. In host developer environments, `pydantic` was silently resolved via `%APPDATA%\Python\...`; in pure clean virtualenvs, `scs` failed on launch with `ModuleNotFoundError: No module named 'pydantic'`.
+  3. Defect `POST-GA-002` Identified (P1): Direct `pip install git+https://...` wheel distribution places `scs_core` at `site-packages/src/scs_core`, which is not on `sys.path` without `SCS_CORE_PYTHON_PATH`.
+  4. Workaround Validated: In the cloned source environment (verbatim `QUICKSTART.md`), running `pip install pydantic` completely restores `scs` and `python -m engine.scs_cli` functionality (exit code 0 in $< 0.15\text{s}$). Installing test packages (`starlette`, `httpx`) achieves **124/124 tests passing 100%**.
+  5. Governance Preserved: `D:\000. GITHUB\Agent_Continuity_Steward` remains untouched; zero commits made to `main`. Defects are cataloged for resolution in future maintenance release `v1.0.1`.
+- **Evidence:**
+  - `docs/PHASE_11_STEP_11_1_RESULTS.md`
+  - `F:\000_Ai Project\scs_dogfood_sandbox\ExternalCloneUser`
+- **Status:** **DEFECTS CATALOGED & WORKAROUND VERIFIED (STEP 11.1 COMPLETE)**
+
+---
+
+### Entry DFG-018 — Phase 11 Step 11.2 Verbatim QUICKSTART Audit & User Journey Validation (Session 16)
+- **Date:** 2026-11-06
+- **Evaluator:** Product Architecture & Stability Engineering
+- **Observation:**
+  1. Complete User Journey Evaluated: Executed `docs/QUICKSTART.md` step by step in isolated external test environment `QuickstartValidationUser`.
+  2. Installation & Verification: `git clone` + `pip install -e .` succeeded. `verify_release.py` failed due to missing `pydantic` in clean venv (`POST-GA-001`). Tested subsequent steps under Workaround A (`pip install pydantic`).
+  3. Core Lifecycle Verification:
+     - `scs new PAY`: Initialized vault `C:\Users\Asus\My_Project_Continuity\PAY`, created baseline snapshot `SNP-BASELINE` with SHA-256 seal.
+     - `scs record PAY`: Sliced active dialogue turns into raw evidence `SES001_20261106_1058.md` and quarantined 533 candidate proposals.
+     - `scs status PAY`: Reported `[SEAL INTACT]`, rendered proposal quarantine queue with actionable guidance.
+     - Custody Gate: `scs reject P03 --why "Duplicate template" --record-why` recorded rejection into `REJECTED_OPTIONS.md`; `scs reject P04` discarded cleanly; `scs approve --all` promoted 531 items into `canonical/ledger.json` and computed new seal `SNP-20261106-003`.
+     - `scs handover PAY`: Generated `PAY_PROJECT_RECOVERY_CARD.md` and `PAY_AI_HANDOVER_PACKAGE.md` in sub-second time.
+  4. Discovered Defect `POST-GA-003` (P2): Section 5 of `QUICKSTART.md` documents `scs rollback --snapshot <SNP_CODE>`, but `scs_cli.py` requires `snapshot_code` positionally. Running positionally (`scs rollback SNP-20261106-001 --project PAY`) restored state and seal with 100% fidelity.
+  5. Discovered Defect `POST-GA-004` (P3): Cosmetic banner drift between `QUICKSTART.md` sample output and actual `verify_release.py` header.
+  6. Governance Preserved: `D:\000. GITHUB\Agent_Continuity_Steward` remains untouched; zero commits on `main`. All defects cataloged in `POST_GA_DEFECT_ASSESSMENT.md`.
+- **Evidence:**
+  - `docs/PHASE_11_STEP_11_2_RESULTS.md`
+  - `docs/evidence/POST_GA_DEFECT_ASSESSMENT.md`
+  - `C:\Users\Asus\My_Project_Continuity\PAY\.continuity`
+- **Status:** **VERBATIM QUICKSTART AUDIT COMPLETE (STEP 11.2 FINISHED)**
+
+---
+
+### Entry DFG-019 — Phase 11 Step 11.3 Antigravity Skill Discovery & Greenfield Dogfooding (Session 17)
+- **Date:** 2026-11-06
+- **Evaluator:** Product Architecture & Stability Engineering
+- **Observation:**
+  1. Skill Discovery & Progressive Disclosure: Clean installation of published `.agents/skills/scs/SKILL.md` into `CartServiceApp`. Verified valid metadata, dispatcher-only principle, and clean progressive disclosure.
+  2. Greenfield Bootstrapping: Initialized `CART` project in dedicated external vault `~/My_Project_Continuity/CART_SERVICE_APP`. Confirmed zero cross-project leakage from prior vaults (`PAY`, `ALPHA`, `SBX`, `SCL`). Baseline snapshot `SNP-BASELINE` / `SNP-20261106-001` sealed under SHA-256 (`70acce89...`).
+  3. Session Capture & Quarantine Gate: Executed `/scs record CART` capturing 107 turns into raw evidence `SES001_20261106_1102.md` and quarantining 538 proposals. Verified `canonical/ledger.json` was 100% protected against AI self-promotion.
+  4. Human Custody Ratification: Approved proposals via `scs approve --all`, advancing deterministic seal to `SNP-20261106-002` (`92e1ea1b...`).
+  5. Master Handover Compilation: Generated `CART_PROJECT_RECOVERY_CARD.md` (~500 tokens) and `CART_AI_HANDOVER_PACKAGE.md`.
+  6. Cold-Start Rehydration Benchmark: Independent subagent auditor `787727f5-07ee-4661-8940-b3b9ee7adb1d` evaluated the project with zero prior chat history. Achieved a perfect **10.0 / 10.0** rehydration score, flawlessly reconstructing project identity, 64-char hash, active tasks, 15 decisions, and 120 constraints, while firmly shutting down all unratified bypass attempts.
+  7. Governance Preserved: `D:\000. GITHUB\Agent_Continuity_Steward` remains untouched; zero commits on `main`. Zero new defects discovered in Step 11.3.
+- **Evidence:**
+  - `docs/PHASE_11_STEP_11_3_RESULTS.md`
+  - Subagent transcript `787727f5-07ee-4661-8940-b3b9ee7adb1d`
+  - `C:\Users\Asus\My_Project_Continuity\CART_SERVICE_APP\.continuity`
+- **Status:** **SKILL DISCOVERY & COLD-START REHYDRATION VERIFIED (10.0 / 10.0)**
+
+---
+
+### Entry DFG-020 — Phase 11 Step 11.4 Real Greenfield Dogfooding (CartServiceApp_v2) & Longitudinal Continuity Benchmark (Session 18)
+- **Date:** 2026-11-06
+- **Evaluator:** Product Architecture & Stability Engineering
+- **Observation:**
+  1. Greenfield Interrupted Engineering Simulation: Executed realistic 5-session, 50-turn development lifecycle for `CartServiceApp_v2` (`CART2`) in dedicated sandbox `F:\000_Ai Project\scs_dogfood_sandbox\CartServiceApp_v2` and vault `~/My_Project_Continuity/CART_SERVICE_APP_V2`.
+  2. Multi-Session Topic Lifecycle:
+     - Session 1: Baseline architecture, PostgreSQL selection (DEC-001) vs MongoDB rejection (REJ-001), Redis selection (DEC-002), Ed25519 JWT (DEC-003) vs shared secrets rejection (REJ-002).
+     - Session 2: Checkout FSM, 30m cart TTL, 15m hold timer, X-Idempotency-Key UUIDv4 (CON-002), RabbitMQ event bus (DEC-006) vs Kafka rejection (REJ-003).
+     - Session 3: Interruption checkpoint, optimistic locking (DEC-010) vs pessimistic row locks rejection (REJ-004), handover compilation.
+     - Session 4: Stripe PaymentIntents API (DEC-012), HMAC-SHA256 webhooks (DEC-013), raw card storage rejection (REJ-006).
+     - Session 5: OpenTelemetry tracing (DEC-016), Prometheus metrics (DEC-017), proprietary APM rejection (REJ-007), 15s graceful shutdown (CON-005).
+  3. Longitudinal Telemetry Captured:
+     - Incremental capture (`t_rec`): $0.245\text{s} - 0.259\text{s}$ (avg $0.251\text{s}$).
+     - Deduplication (`t_dedup`): $0.222\text{s} - 0.236\text{s}$ (avg $0.227\text{s}$, 100% `NO_NEW_TURNS` confirmed).
+     - Approval (`t_app`): $0.231\text{s} - 0.257\text{s}$ (avg $0.242\text{s}$).
+     - Handover package (`t_ho`): $0.285\text{s} - 0.534\text{s}$ (avg $0.399\text{s}$).
+     - Storage scaling: `canonical/ledger.json` grew smoothly from 6.34 KB to 22.91 KB ($< 50\text{ KB}$ ceiling); Fast Recovery Card stayed strictly bounded at 2,555 bytes (~638 tokens, zero token explosion).
+  4. Independent Cold-Start Rehydration Benchmark: Subagent auditor `7c8d148e-e2f3-42eb-af22-5688ead347d4` with zero conversation history achieved a perfect **10.0 / 10.0** rehydration score across state recovery (exact 64-char seal `1759a632...`), decision preservation (19 decisions, 7 rejected options), and governance compliance (defeated all 4 drift/bypass challenges).
+  5. Governance Preserved: `D:\000. GITHUB\Agent_Continuity_Steward` remains untouched on commit `3196997`; zero commits on `main`. Zero new defects discovered in Step 11.4.
+- **Evidence:**
+  - `docs/PHASE_11_STEP_11_4_RESULTS.md`
+  - `F:\000_Ai Project\scs_dogfood_sandbox\cart_v2_telemetry.json`
+  - Subagent audit transcript `7c8d148e-e2f3-42eb-af22-5688ead347d4`
+  - `C:\Users\Asus\My_Project_Continuity\CART_SERVICE_APP_V2\.continuity`
+- **Status:** **LONGITUDINAL CONTINUITY & COLD-START REHYDRATION VERIFIED (10.0 / 10.0)**
+
+---
+
 ## 3. Active Dogfooding Surveillance Checklist
 
 During every subsequent session, the Operator/Auditor monitors for:

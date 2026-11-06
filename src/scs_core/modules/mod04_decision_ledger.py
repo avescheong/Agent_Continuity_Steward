@@ -2,8 +2,8 @@
 
 import json
 from typing import List, Optional
-from src.scs_core.db.database import VaultDatabase, next_entity_code
-from src.scs_core.models import DecisionRecord, DecisionKind, utc_now_iso
+from scs_core.db.database import VaultDatabase, next_entity_code
+from scs_core.models import DecisionRecord, DecisionKind, utc_now_iso
 
 
 class DecisionLedgerService:

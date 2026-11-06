@@ -510,7 +510,7 @@ class CavemanContextValidator:
         - Decision Evolution: Detects reversals and superseded choices.
         - Evidence Traceability: Populates provenance matrix for auditability.
         """
-        from src.scs_core.modules.caveman_engine import CausalDecision
+        from scs_core.modules.caveman_engine import CausalDecision
 
         confirmed_decisions: List[CausalDecision] = []
         recommendations: List[Dict[str, str]] = []

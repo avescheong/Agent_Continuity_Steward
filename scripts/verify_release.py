@@ -74,7 +74,9 @@ def main() -> int:
     # Resolve project root relative to this script
     script_path = Path(__file__).resolve()
     repo_root = script_path.parent.parent
-    if (repo_root / "SCS_AG_v2").exists():
+    if (repo_root / "src" / "engine").exists():
+        scs_root = repo_root / "src"
+    elif (repo_root / "SCS_AG_v2" / "engine").exists():
         scs_root = repo_root / "SCS_AG_v2"
     else:
         scs_root = repo_root
@@ -84,8 +86,13 @@ def main() -> int:
         scs_root / "engine" / "core_adapter.py",
         scs_root / "engine" / "transcript_reader.py",
         scs_root / "engine" / "scs_cli.py",
+    ]
+    skill_candidates = [
+        repo_root / ".agents" / "skills" / "scs" / "SKILL.md",
         scs_root / ".agents" / "skills" / "scs" / "SKILL.md",
     ]
+    skill_file = next((s for s in skill_candidates if s.exists()), skill_candidates[0])
+    core_artifacts.append(skill_file)
 
     missing_artifacts = []
     for art in core_artifacts:
@@ -102,7 +109,7 @@ def main() -> int:
     # -------------------------------------------------------------------------
     # 4. Automated Test Suite Execution (Dual-Layer)
     # -------------------------------------------------------------------------
-    log_step("4. Automated Conformance Test Suite (124 Tests)")
+    log_step("4. Automated Conformance Test Suite (134 Tests)")
     loader = unittest.TestLoader()
 
     # Discover Engine suite
@@ -112,8 +119,13 @@ def main() -> int:
     # Discover Upstream suite if present
     upstream_dir = str(repo_root / "tests")
     core_python_dir = str(repo_root / "core" / "python")
+    src_dir = str(repo_root / "src")
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
+    if str(scs_root) not in sys.path:
+        sys.path.insert(0, str(scs_root))
+    if src_dir not in sys.path and Path(src_dir).exists():
+        sys.path.insert(0, src_dir)
     if core_python_dir not in sys.path and Path(core_python_dir).exists():
         sys.path.insert(0, core_python_dir)
 

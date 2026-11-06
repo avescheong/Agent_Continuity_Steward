@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-continuity-steward"
-version = "1.0.0"
+version = "1.0.1"
 description = "Deterministic Session Continuity and Architecture Governance for AI Coding Agents"
 readme = "README.md"
 authors = [
@@ -40,8 +40,12 @@ classifiers = [
 scs = "engine.scs_cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["engine*", "src*"]
+where = ["src"]
+include = ["engine*", "scs_core*", "scs_host*"]
+
+[tool.setuptools.package-data]
+"scs_core.db" = ["*.sql"]
+"ui" = ["**/*"]
 
 [project.urls]
 Homepage = "https://github.com/Agent-Continuity-Steward/Agent_Continuity_Steward"
