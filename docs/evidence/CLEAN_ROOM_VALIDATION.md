@@ -162,7 +162,7 @@ Summary of Verification Attestations:
 ## 5. Security & Path Sanitization Audits
 
 ### 5.1 Machine-Local Path Audit
-A recursive text scan was performed across every file in `D:\000. GITHUB\Agent_Continuity_Steward` searching for development root markers (`F:\`, `C:\Users\`, `Asus`):
+A recursive text scan was performed across every file in `D:\000. GITHUB\Agent_Continuity_Steward` searching for development root markers (e.g. machine-specific drives, local usernames):
 
 - **Target Files Scanned:** All Python source, Markdown documentation, JSON schemas, specifications, scripts.
 - **Leaks Identified:** **0 occurrences**
