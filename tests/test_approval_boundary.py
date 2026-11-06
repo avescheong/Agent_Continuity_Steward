@@ -3,13 +3,13 @@
 import unittest
 import tempfile
 from pathlib import Path
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.models import ProposalType, ProposalStatus, TaskStatus
-from src.scs_core.modules.mod04_projects_sessions import ProjectSessionService
-from src.scs_core.modules.mod04_decision_ledger import DecisionLedgerService
-from src.scs_core.modules.mod05_checklist_engine import ChecklistEngineService
-from src.scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
-from src.scs_core.modules.mod03_approval_gate import ApprovalGateService
+from scs_core.db.database import VaultDatabase
+from scs_core.models import ProposalType, ProposalStatus, TaskStatus
+from scs_core.modules.mod04_projects_sessions import ProjectSessionService
+from scs_core.modules.mod04_decision_ledger import DecisionLedgerService
+from scs_core.modules.mod05_checklist_engine import ChecklistEngineService
+from scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
+from scs_core.modules.mod03_approval_gate import ApprovalGateService
 
 
 class TestApprovalBoundary(unittest.TestCase):

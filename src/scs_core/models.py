@@ -1,15 +1,104 @@
 """Domain models, enums, and RPC payload definitions for SCS-HUD."""
 
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timezone
 import uuid
-from pydantic import BaseModel, Field
 
 
 def utc_now_iso() -> str:
     """Returns current UTC timestamp in ISO-8601 format."""
     return datetime.now(timezone.utc).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Zero-Dependency Base Model & Field Definition (Pure Python Standard Library)
+# ---------------------------------------------------------------------------
+
+class _FieldMarker:
+    def __init__(self, default=None, default_factory=None):
+        self.default = default
+        self.default_factory = default_factory
+
+
+def Field(*, default=None, default_factory=None, **kwargs) -> Any:
+    """Drop-in replacement for pydantic.Field using standard library only."""
+    return _FieldMarker(default=default, default_factory=default_factory)
+
+
+class BaseModel:
+    """Standard library drop-in replacement for pydantic.BaseModel.
+
+    Provides:
+      - Field initialization with defaults and default_factories
+      - Resilient keyword handling (ignores unknown kwargs for backward compatibility)
+      - Recursive .model_dump(mode='json') and .dict()
+      - __repr__ and __eq__
+    """
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        declared = {}
+        for base in reversed(cls.__mro__):
+            for k, v in getattr(base, "__annotations__", {}).items():
+                if k.startswith("_"):
+                    continue
+                default_val = getattr(base, k, None)
+                declared[k] = (v, default_val)
+        cls._declared_fields = declared
+
+    def __init__(self, *args, **kwargs):
+        declared = getattr(self.__class__, "_declared_fields", {})
+        field_keys = list(declared.keys())
+        for i, val in enumerate(args):
+            if i < len(field_keys):
+                setattr(self, field_keys[i], val)
+        for name, (_, default_val) in declared.items():
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
+            elif name not in self.__dict__:
+                if isinstance(default_val, _FieldMarker):
+                    if default_val.default_factory is not None:
+                        setattr(self, name, default_val.default_factory())
+                    else:
+                        setattr(self, name, default_val.default)
+                else:
+                    setattr(self, name, default_val)
+
+    def model_dump(self, mode: str = "json") -> Dict[str, Any]:
+        """Serializes model to dictionary recursively, converting Enums and nested models."""
+        declared = getattr(self.__class__, "_declared_fields", {})
+        out = {}
+        for name in declared:
+            val = getattr(self, name, None)
+            out[name] = self._dump_value(val, mode=mode)
+        return out
+
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+        """Backward-compatibility alias for model_dump."""
+        return self.model_dump(mode="python")
+
+    @classmethod
+    def _dump_value(cls, val: Any, mode: str = "json") -> Any:
+        if isinstance(val, BaseModel):
+            return val.model_dump(mode=mode)
+        if isinstance(val, Enum):
+            return val.value
+        if isinstance(val, list):
+            return [cls._dump_value(x, mode=mode) for x in val]
+        if isinstance(val, dict):
+            return {k: cls._dump_value(v, mode=mode) for k, v in val.items()}
+        return val
+
+    def __repr__(self) -> str:
+        declared = getattr(self.__class__, "_declared_fields", {})
+        attrs = ", ".join(f"{k}={getattr(self, k, None)!r}" for k in declared)
+        return f"{self.__class__.__name__}({attrs})"
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        declared = getattr(self.__class__, "_declared_fields", {})
+        return all(getattr(self, k, None) == getattr(other, k, None) for k in declared)
 
 
 # ---------------------------------------------------------------------------

@@ -24,22 +24,25 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
 
 # ---------------------------------------------------------------------------
-# Dynamic Read-Only Import Configuration for Upstream SCS Core
+# Import Configuration for SCS Core
 # ---------------------------------------------------------------------------
 
 CURRENT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = CURRENT_DIR.parent
-if (CURRENT_DIR.parent.parent / "core" / "python").exists():
-    REPO_ROOT = CURRENT_DIR.parent.parent
-elif (CURRENT_DIR.parent / "core" / "python").exists():
-    REPO_ROOT = CURRENT_DIR.parent
 
-CORE_PYTHON_DIR = REPO_ROOT / "core" / "python"
-
-if str(CORE_PYTHON_DIR) not in sys.path and CORE_PYTHON_DIR.exists():
-    sys.path.insert(0, str(CORE_PYTHON_DIR))
-elif "SCS_CORE_PYTHON_PATH" in os.environ and os.environ["SCS_CORE_PYTHON_PATH"] not in sys.path:
-    sys.path.insert(0, os.environ["SCS_CORE_PYTHON_PATH"])
+try:
+    import scs_core
+except ImportError:
+    # Development / uninstalled checkout fallback
+    for candidate in [
+        CURRENT_DIR.parent / "src",
+        CURRENT_DIR.parent.parent / "src",
+        CURRENT_DIR.parent / "core" / "python",
+        CURRENT_DIR.parent.parent / "core" / "python",
+    ]:
+        if candidate.exists() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+    if "SCS_CORE_PYTHON_PATH" in os.environ and os.environ["SCS_CORE_PYTHON_PATH"] not in sys.path:
+        sys.path.insert(0, os.environ["SCS_CORE_PYTHON_PATH"])
 
 try:
     import scs_core
@@ -71,8 +74,8 @@ try:
     )
 except ImportError as exc:
     raise ImportError(
-        f"Failed to import upstream scs_core from '{CORE_PYTHON_DIR}'. "
-        "Verify that core/python exists and contains the scs_core package."
+        "Failed to import scs_core package. "
+        "Ensure agent-continuity-steward is installed or src/ is in PYTHONPATH."
     ) from exc
 
 

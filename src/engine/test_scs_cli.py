@@ -365,6 +365,38 @@ class TestSCSCli(unittest.TestCase):
         restored = vault_store.read_ledger(vault_path, verify_seal=True)
         self.assertEqual(len(restored["decisions"]), 0)
 
+        # POST-GA-003: Verify --snapshot flag alias
+        fresh_ledger = vault_store.read_ledger(vault_path, verify_seal=True)
+        fresh_ledger["decisions"].append({
+            "code": "DEC-FLAG",
+            "statement": "Decision to test flag rollback",
+            "rationale_why": "Testing --snapshot flag",
+            "is_active": True,
+        })
+        vault_store.write_ledger(vault_path, fresh_ledger, label="Flag commit")
+        self.assertEqual(len(vault_store.read_ledger(vault_path)["decisions"]), 1)
+
+        stdout_buf2 = io.StringIO()
+        with patch("sys.stdout", stdout_buf2):
+            code_flag = scs_cli.main(["rollback", "--snapshot", initial_snap, "--project", str(proj_dir)])
+        self.assertEqual(code_flag, 0)
+        self.assertIn(f"Successfully rolled back canonical memory to snapshot `{initial_snap}`", stdout_buf2.getvalue())
+        self.assertEqual(len(vault_store.read_ledger(vault_path)["decisions"]), 0)
+
+        # POST-GA-003: Missing snapshot argument should cleanly exit with code 1
+        stderr_buf = io.StringIO()
+        with patch("sys.stderr", stderr_buf):
+            code_missing = scs_cli.main(["rollback", "--project", str(proj_dir)])
+        self.assertEqual(code_missing, 1)
+        self.assertIn("Snapshot code required", stderr_buf.getvalue())
+
+        # POST-GA-003: Invalid snapshot argument should cleanly exit with code 1
+        stderr_buf2 = io.StringIO()
+        with patch("sys.stderr", stderr_buf2):
+            code_invalid = scs_cli.main(["rollback", "--snapshot", "SNP-NONEXISTENT", "--project", str(proj_dir)])
+        self.assertEqual(code_invalid, 1)
+        self.assertIn("Error executing rollback", stderr_buf2.getvalue())
+
     # -----------------------------------------------------------------------
     # 11. Generative UI dashboard generation
     # -----------------------------------------------------------------------

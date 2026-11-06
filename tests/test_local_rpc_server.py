@@ -8,20 +8,27 @@ from pathlib import Path
 warnings.filterwarnings("ignore", message=".*Using `httpx` with `starlette.testclient`.*")
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-from starlette.testclient import TestClient
+try:
+    from starlette.testclient import TestClient
+    from scs_host.local_rpc_server import LocalRPCServer
+    HAS_STARLETTE = True
+except ImportError:
+    HAS_STARLETTE = False
+    TestClient = None
+    LocalRPCServer = None
 
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.modules.mod04_projects_sessions import ProjectSessionService
-from src.scs_core.modules.mod04_decision_ledger import DecisionLedgerService
-from src.scs_core.modules.mod05_checklist_engine import ChecklistEngineService
-from src.scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
-from src.scs_core.modules.mod03_approval_gate import ApprovalGateService
-from src.scs_core.modules.mod07_reconciler import ReadOnlyReconciler
-from src.scs_core.modules.mod02_protocol_engine import ProtocolEngineService
-from src.scs_core.ipc.dispatcher import SCSDispatcher
-from src.scs_host.local_rpc_server import LocalRPCServer
+from scs_core.db.database import VaultDatabase
+from scs_core.modules.mod04_projects_sessions import ProjectSessionService
+from scs_core.modules.mod04_decision_ledger import DecisionLedgerService
+from scs_core.modules.mod05_checklist_engine import ChecklistEngineService
+from scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
+from scs_core.modules.mod03_approval_gate import ApprovalGateService
+from scs_core.modules.mod07_reconciler import ReadOnlyReconciler
+from scs_core.modules.mod02_protocol_engine import ProtocolEngineService
+from scs_core.ipc.dispatcher import SCSDispatcher
 
 
+@unittest.skipUnless(HAS_STARLETTE, "starlette package not installed (optional UI server dependency)")
 class TestLocalRPCServerAuthorization(unittest.TestCase):
     """Test suite validating HTTP X-SCS-Token enforcement and /api/invoke behavior."""
 

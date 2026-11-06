@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Optional
 
 import uvicorn
-from src.scs_core.config import DEFAULT_DATA_DIR
-from src.scs_host.local_rpc_server import LocalRPCServer
-from src.scs_host import win32_window
+from scs_core.config import DEFAULT_DATA_DIR
+from scs_host.local_rpc_server import LocalRPCServer
+from scs_host import win32_window
 
 try:
     import win32gui

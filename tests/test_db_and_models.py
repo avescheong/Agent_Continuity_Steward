@@ -4,8 +4,8 @@ import unittest
 import tempfile
 import sqlite3
 from pathlib import Path
-from src.scs_core.db.database import VaultDatabase, next_entity_code
-from src.scs_core.models import (
+from scs_core.db.database import VaultDatabase, next_entity_code
+from scs_core.models import (
     Project, Proposal, ProposalType, ProposalStatus,
     DecisionRecord, DecisionKind, TaskItem, TaskStatus,
     ArtifactRecord, ArtifactType, ArtifactCustodyState,

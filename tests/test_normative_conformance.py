@@ -3,7 +3,7 @@
 import unittest
 import json
 from pathlib import Path
-from src.scs_core.modules.caveman_engine import CavemanContextExtractionEngine
+from scs_core.modules.caveman_engine import CavemanContextExtractionEngine
 
 
 class TestNormativeConformance(unittest.TestCase):

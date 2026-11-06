@@ -20,8 +20,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from src.scs_core.modules.scrubber import scrub_secrets
-from src.scs_core.modules.caveman_context_validator import CavemanContextValidator, sanitize_proposition
+from scs_core.modules.scrubber import scrub_secrets
+from scs_core.modules.caveman_context_validator import CavemanContextValidator, sanitize_proposition
 
 
 # Conversational noise patterns to filter out (greetings, filler, polite sign-offs only)

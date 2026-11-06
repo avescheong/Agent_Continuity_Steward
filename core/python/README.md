@@ -22,7 +22,7 @@ It provides a vendor-neutral, local-first continuity stewardship engine designed
 
 ```
 core/python/
-├── pyproject.toml              # Standalone package definition (pydantic dependency only)
+├── pyproject.toml              # Standalone package definition (zero external dependencies)
 ├── README.md                   # Core documentation
 ├── scs_core/                   # Pure headless domain library
 │   ├── __init__.py             # Public API exports
@@ -56,7 +56,7 @@ core/python/
 
 ### Requirements
 - **Python:** >= 3.11
-- **Dependencies:** `pydantic >= 2.0.0`
+- **Dependencies:** None (standard library only)
 - **Zero GUI / OS Dependencies:** Runs identically on Linux, macOS, and Windows.
 
 ```bash

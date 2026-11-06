@@ -8,20 +8,20 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 from datetime import datetime, timezone
 
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.models import (
+from scs_core.db.database import VaultDatabase
+from scs_core.models import (
     ProposalType, TaskStatus, TaskPriority, DecisionKind, ArtifactType, ArtifactCustodyState,
     BootstrapResult, ReconcileSummary, utc_now_iso, compact_why,
     ConversationSession, ChatFragment, CheckpointStatus
 )
-from src.scs_core.modules.scrubber import scrub_secrets
-from src.scs_core.modules.caveman_engine import CavemanContextExtractionEngine, ExtractedContext
-from src.scs_core.modules.mod04_projects_sessions import ProjectSessionService
-from src.scs_core.modules.mod04_decision_ledger import DecisionLedgerService
-from src.scs_core.modules.mod05_checklist_engine import ChecklistEngineService
-from src.scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
-from src.scs_core.modules.mod03_approval_gate import ApprovalGateService
-from src.scs_core.modules.mod07_reconciler import ReadOnlyReconciler
+from scs_core.modules.scrubber import scrub_secrets
+from scs_core.modules.caveman_engine import CavemanContextExtractionEngine, ExtractedContext
+from scs_core.modules.mod04_projects_sessions import ProjectSessionService
+from scs_core.modules.mod04_decision_ledger import DecisionLedgerService
+from scs_core.modules.mod05_checklist_engine import ChecklistEngineService
+from scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
+from scs_core.modules.mod03_approval_gate import ApprovalGateService
+from scs_core.modules.mod07_reconciler import ReadOnlyReconciler
 
 
 UNIVERSAL_SYNC_FOOTER = """

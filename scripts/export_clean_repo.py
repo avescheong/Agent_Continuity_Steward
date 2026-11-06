@@ -14,7 +14,7 @@ from pathlib import Path
 SOURCE_ROOT = Path(__file__).resolve().parent.parent
 TARGET_ROOT = Path(r"D:\000. GITHUB\Agent_Continuity_Steward")
 
-EXCLUDE_DIRS = {"__pycache__", ".continuity", ".pytest_cache", ".git", ".idea", ".vscode"}
+EXCLUDE_DIRS = {"__pycache__", ".continuity", ".pytest_cache", ".git", ".idea", ".vscode", "pip", ".cache"}
 EXCLUDE_FILES = {"desktop.ini", "*.pyc", "*.pyo", ".DS_Store", "Thumbs.db"}
 
 
@@ -71,25 +71,35 @@ def main():
     if not TARGET_ROOT.exists():
         TARGET_ROOT.mkdir(parents=True, exist_ok=True)
 
-    # 1. engine/ (from SCS_AG_v2/engine)
-    print("Copying engine/...")
-    copy_tree_filtered(SOURCE_ROOT / "SCS_AG_v2" / "engine", TARGET_ROOT / "engine")
+    # 1. src/ (from src)
+    print("Copying src/...")
+    copy_tree_filtered(SOURCE_ROOT / "src", TARGET_ROOT / "src")
 
-    # 2. specs/ (from SCS_AG_v2/specs)
+    # 2. src/engine (from SCS_AG_v2/engine) - Canonical PyPA src layout
+    print("Copying engine to src/engine/...")
+    copy_tree_filtered(SOURCE_ROOT / "SCS_AG_v2" / "engine", TARGET_ROOT / "src" / "engine")
+
+    # Remove root engine/ if exists in target to enforce canonical src/ layout
+    old_engine = TARGET_ROOT / "engine"
+    if old_engine.exists():
+        shutil.rmtree(old_engine)
+
+    # Remove src/__init__.py if exists so src/ is a namespace/container directory
+    src_init = TARGET_ROOT / "src" / "__init__.py"
+    if src_init.exists():
+        src_init.unlink()
+
+    # 3. specs/ (from SCS_AG_v2/specs)
     print("Copying specs/...")
     copy_tree_filtered(SOURCE_ROOT / "SCS_AG_v2" / "specs", TARGET_ROOT / "specs")
 
-    # 3. .agents/ (from SCS_AG_v2/.agents)
+    # 4. .agents/ (from SCS_AG_v2/.agents)
     print("Copying .agents/...")
     copy_tree_filtered(SOURCE_ROOT / "SCS_AG_v2" / ".agents", TARGET_ROOT / ".agents")
 
-    # 4. core/ (from core)
+    # 5. core/ (from core)
     print("Copying core/...")
     copy_tree_filtered(SOURCE_ROOT / "core", TARGET_ROOT / "core")
-
-    # 5. src/ (from src)
-    print("Copying src/...")
-    copy_tree_filtered(SOURCE_ROOT / "src", TARGET_ROOT / "src")
 
     # 6. tests/ (from tests)
     print("Copying tests/...")
@@ -105,6 +115,10 @@ def main():
     scripts_target.mkdir(parents=True, exist_ok=True)
     shutil.copy2(SOURCE_ROOT / "scripts" / "verify_release.py", scripts_target / "verify_release.py")
     shutil.copy2(SOURCE_ROOT / "scripts" / "export_clean_repo.py", scripts_target / "export_clean_repo.py")
+    if (SOURCE_ROOT / "scripts" / "test_quickstart_e2e.py").exists():
+        shutil.copy2(SOURCE_ROOT / "scripts" / "test_quickstart_e2e.py", scripts_target / "test_quickstart_e2e.py")
+    if (SOURCE_ROOT / "scripts" / "verify_v1_0_1_rc.py").exists():
+        shutil.copy2(SOURCE_ROOT / "scripts" / "verify_v1_0_1_rc.py", scripts_target / "verify_v1_0_1_rc.py")
 
     # 9. docs/
     print("Copying docs/...")
@@ -159,6 +173,8 @@ build/
 env/
 venv/
 ENV/
+pip/
+.cache/
 
 # Private Continuity Vaults (Centralized external vaults recommended)
 .continuity/
@@ -190,7 +206,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-continuity-steward"
-version = "1.0.0"
+version = "1.0.1"
 description = "Deterministic Session Continuity and Architecture Governance for AI Coding Agents"
 readme = "README.md"
 authors = [
@@ -226,8 +242,12 @@ classifiers = [
 scs = "engine.scs_cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["engine*", "src*"]
+where = ["src"]
+include = ["engine*", "scs_core*", "scs_host*"]
+
+[tool.setuptools.package-data]
+"scs_core.db" = ["*.sql"]
+"ui" = ["**/*"]
 
 [project.urls]
 Homepage = "https://github.com/Agent-Continuity-Steward/Agent_Continuity_Steward"

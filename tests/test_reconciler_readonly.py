@@ -4,11 +4,11 @@ import unittest
 import tempfile
 import ast
 from pathlib import Path
-from src.scs_core.db.database import VaultDatabase
-from src.scs_core.models import ArtifactType, ArtifactCustodyState
-from src.scs_core.modules.mod04_projects_sessions import ProjectSessionService
-from src.scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
-from src.scs_core.modules.mod07_reconciler import ReadOnlyReconciler
+from scs_core.db.database import VaultDatabase
+from scs_core.models import ArtifactType, ArtifactCustodyState
+from scs_core.modules.mod04_projects_sessions import ProjectSessionService
+from scs_core.modules.mod06_artifact_registry import ArtifactRegistryService
+from scs_core.modules.mod07_reconciler import ReadOnlyReconciler
 
 
 class TestReconcilerReadOnly(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestReconcilerReadOnly(unittest.TestCase):
 
     def test_reconciler_contains_no_write_calls(self):
         """AST security inspection: mod07_reconciler must contain zero write/delete calls."""
-        from src.scs_core.modules import mod07_reconciler
+        from scs_core.modules import mod07_reconciler
         reconciler_code = Path(mod07_reconciler.__file__).read_text(encoding="utf-8")
         tree = ast.parse(reconciler_code)
         

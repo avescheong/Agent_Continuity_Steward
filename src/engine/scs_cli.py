@@ -554,7 +554,10 @@ def cmd_handover(args: argparse.Namespace) -> int:
 
 def cmd_rollback(args: argparse.Namespace) -> int:
     """Restores canonical SSOT state from a previously sealed snapshot."""
-    snap_code = args.snapshot_code.strip()
+    snap_code = (getattr(args, "snapshot_flag", None) or getattr(args, "snapshot_code", None) or "").strip()
+    if not snap_code:
+        print(f"{ERR_SYM} Error executing rollback: Snapshot code required. Provide as positional argument or via `--snapshot <CODE>`.", file=sys.stderr)
+        return 1
     try:
         conv_id = getattr(args, "conv_id", None) or auto_detect_conversation_id()
         vault_path = vault_store.resolve_project_vault(project_arg=args.project, conversation_id=conv_id)
@@ -789,7 +792,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     # rollback
     p_rollback = subparsers.add_parser("rollback", help="Restore canonical memory from prior sealed snapshot")
-    p_rollback.add_argument("snapshot_code", help="Snapshot code to restore (e.g. SNP-20261105-001)")
+    p_rollback.add_argument("snapshot_code", nargs="?", default=None, help="Snapshot code to restore (e.g. SNP-20261105-001)")
+    p_rollback.add_argument("--snapshot", dest="snapshot_flag", help="Snapshot code to restore (flag alias, e.g. SNP-20261105-001)")
     p_rollback.add_argument("--project", help="Target project code or directory")
     p_rollback.add_argument("--conv-id", help="Antigravity conversation UUID")
     p_rollback.set_defaults(func=cmd_rollback)
