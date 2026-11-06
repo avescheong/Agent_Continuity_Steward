@@ -184,7 +184,7 @@ The clean publication repository was initialized as a pristine Git origin:
 - **Repository Path:** `D:\000. GITHUB\Agent_Continuity_Steward`
 - **Default Branch:** `main`
 - **Exclusion Rules:** `.gitignore` active (ignoring `.continuity/`, `__pycache__/`, `*.pyc`, `desktop.ini`, `.env`)
-- **Initial Commit Hash:** `93970931e5f0cf65f1d534566a4a6f0a043e6a94`
+- **Initial Commit Hash:** `a8c0321b6853bfe77df2ebbab0c1e177da6c825c`
 - **Initial Commit Message:** `"Initial release: Agent Continuity Steward v1.0.0"`
 - **Total Tracked Assets:** 145 files (32,082 insertions)
 

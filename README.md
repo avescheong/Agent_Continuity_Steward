@@ -105,11 +105,12 @@ python -m engine.scs_cli handover PAY
 
 ## 5. Repository Documentation Directory
 
-- [`ARCHITECTURE.md`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/ARCHITECTURE.md): System topology, component interactions, and data flow.
-- [`QUICKSTART.md`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/QUICKSTART.md): 5-minute setup, installation, and command reference.
-- [`DESIGN_PHILOSOPHY.md`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/DESIGN_PHILOSOPHY.md): Deep dive on why SQLite, daemons, and auto-mutation were rejected.
-- [`GOVERNANCE_MODEL.md`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/GOVERNANCE_MODEL.md): Human custody gates, state sealing, and projection rules.
-- [`SECURITY_MODEL.md`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/SECURITY_MODEL.md): Secret scrubbing, path traversal defense, and air-gapped security.
-- [`ROADMAP.md`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/ROADMAP.md): Phase 1 complete baseline vs Phase 2 deferred capabilities.
-- [`docs/verification/`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/verification/): Complete V&V Plan, Test Strategy, Test Matrix, and Performance Baselines.
-- [`docs/evidence/`](file:///F:/000_Ai%20Project/AI%20SCS%20HUD/SCS_AG_v2/docs/evidence/): Published dogfooding history, benchmark audits, and release validation.
+- [`QUICKSTART.md`](docs/QUICKSTART.md): 5-minute setup, installation, and command reference.
+- [`SKILL_PRODUCTIZATION.md`](docs/SKILL_PRODUCTIZATION.md): Complete Antigravity skill installation, activation, command reference, and validation guide.
+- [`ARCHITECTURE.md`](docs/ARCHITECTURE.md): System topology, component interactions, and data flow.
+- [`DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md): Deep dive on why SQLite, daemons, and auto-mutation were rejected.
+- [`GOVERNANCE_MODEL.md`](docs/GOVERNANCE_MODEL.md): Human custody gates, state sealing, and projection rules.
+- [`SECURITY_MODEL.md`](docs/SECURITY_MODEL.md): Secret scrubbing, path traversal defense, and air-gapped security.
+- [`ROADMAP.md`](docs/ROADMAP.md): Phase 1 complete baseline vs Phase 2 deferred capabilities.
+- [`docs/verification/`](docs/verification/): Complete V&V Plan, Test Strategy, Test Matrix, and Performance Baselines.
+- [`docs/evidence/`](docs/evidence/): Published dogfooding history, benchmark audits, and release validation.
