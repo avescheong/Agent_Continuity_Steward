@@ -377,8 +377,13 @@ class TestGroup5VerificationDx(unittest.TestCase):
         self.assertNotEqual(res_corrupt.returncode, 0)
         self.assertIn("Cryptographic State Seal Mismatch", res_corrupt.stderr + res_corrupt.stdout)
 
+        # Discover initial snapshot code dynamically
+        snapshots = sorted(list((repo_dir / ".continuity" / "snapshots").glob("SNP-*.json")))
+        self.assertTrue(len(snapshots) > 0, "No snapshots found in newly initialized vault")
+        initial_snapshot_code = snapshots[0].stem
+
         # Rollback / restore clean state
-        scs_cli.main(["rollback", "--project", str(repo_dir), "--snapshot", "SNP-20261106-001"])
+        scs_cli.main(["rollback", "--project", str(repo_dir), "--snapshot", initial_snapshot_code])
         (repo_dir / "file2.txt").write_text("clean restored state", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=str(repo_dir), check=True)
         res_restored = subprocess.run(["git", "commit", "-m", "restored commit"], cwd=str(repo_dir), capture_output=True, text=True)
